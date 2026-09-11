@@ -1,11 +1,11 @@
 <div align="center">
 
-  <a href="https://codewave4.github.io/Translator/">
-    <img src="logo.svg" width="96" height="96" alt="Translator Logo" />
-  </a>
+  <h1>🌍 Translator</h1>
+  <h3>Intelligent, Privacy-First Persian ↔ English Engine</h3>
 
-  # Translator
-  **Intelligent, Privacy-First Persian ↔ English Translation Engine**
+  <p>
+    <img src="https://img.shields.io/badge/%F0%9F%8C%8E%20Translator-Privacy--First%20Engine-E4572E?style=for-the-badge&logo=googletranslate&logoColor=white" height="38" alt="Translator Logo" />
+  </p>
 
   <p>
     A blazing-fast client-side translator with zero backend tracking, dual free engines, and Bring-Your-Own-Key (BYOK) AI acceleration.
@@ -24,10 +24,10 @@
   </p>
 
   <p>
-    <a href="https://github.com/codewave4/Translator/stargazers"><img src="https://img.shields.io/github/stars/codewave4/Translator?style=flat-square&color=2563eb" alt="GitHub Stars" /></a>
-    <a href="https://github.com/codewave4/Translator/network/members"><img src="https://img.shields.io/github/forks/codewave4/Translator?style=flat-square&color=2563eb" alt="GitHub Forks" /></a>
-    <a href="https://github.com/codewave4/Translator/commits/main"><img src="https://img.shields.io/github/last-commit/codewave4/Translator?style=flat-square&color=10b981" alt="Last Commit" /></a>
-    <a href="https://github.com/codewave4/Translator"><img src="https://img.shields.io/github/repo-size/codewave4/Translator?style=flat-square&color=64748b" alt="Repo Size" /></a>
+    <a href="https://github.com/codewave4/Translator/stargazers"><img src="https://img.shields.io/github/stars/codewave4/Translator?style=for-the-badge&color=2563eb" alt="GitHub Stars" /></a>
+    <a href="https://github.com/codewave4/Translator/network/members"><img src="https://img.shields.io/github/forks/codewave4/Translator?style=for-the-badge&color=2563eb" alt="GitHub Forks" /></a>
+    <a href="https://github.com/codewave4/Translator/commits/main"><img src="https://img.shields.io/github/last-commit/codewave4/Translator?style=for-the-badge&color=10b981" alt="Last Commit" /></a>
+    <a href="https://github.com/codewave4/Translator"><img src="https://img.shields.io/github/repo-size/codewave4/Translator?style=for-the-badge&color=64748b" alt="Repo Size" /></a>
   </p>
 
   <p>

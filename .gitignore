@@ -1,0 +1,24 @@
+# Dependencies (نباید در گیت‌هاب باشد - با npm install ساخته می‌شود)
+node_modules
+
+# Build output (با GitHub Actions خودکار ساخته می‌شود)
+dist
+dist-ssr
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor & OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.*.local

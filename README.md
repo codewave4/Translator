@@ -1,11 +1,13 @@
 <div align="center">
 
-  <h1>🌍 Translator</h1>
-  <h3>Intelligent, Privacy-First Persian ↔ English Engine</h3>
-
   <p>
-    <img src="https://img.shields.io/badge/%F0%9F%8C%8E%20Translator-Privacy--First%20Engine-E4572E?style=for-the-badge&logo=googletranslate&logoColor=white" height="38" alt="Translator Logo" />
+    <a href="https://codewave4.github.io/Translator/">
+      <img src="https://api.iconify.design/solar:translation-2-bold-duotone.svg?color=%23e4572e" width="96" height="96" alt="Translator Logo" />
+    </a>
   </p>
+
+  <h1>Translator</h1>
+  <h3>Intelligent, Privacy-First Persian ↔ English Engine</h3>
 
   <p>
     A blazing-fast client-side translator with zero backend tracking, dual free engines, and Bring-Your-Own-Key (BYOK) AI acceleration.

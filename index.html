@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="مترجم متن — ترجمه رایگان و سریع متن فارسی به انگلیسی و بیش از ۲۰ زبان دیگر، بدون نیاز به ثبت‌نام"
+    />
+    <meta name="theme-color" content="#0b2422" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230e312e'/%3E%3Ctext x='32' y='45' font-size='36' text-anchor='middle' fill='%23ddb254' font-family='Tahoma' font-weight='bold'%3E%D9%85%3C/text%3E%3C/svg%3E"
+    />
+    <title>مترجم متن | ترجمه فارسی به انگلیسی و بالعکس</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      try {
+        if ((localStorage.getItem("salam-tr-theme") || "dark") === "dark") {
+          document.documentElement.classList.add("dark");
+        }
+        // زبان رابط کاربری: فارسی (پیش‌فرض) یا انگلیسی
+        if (localStorage.getItem("salam-tr-lang") === "en") {
+          document.documentElement.lang = "en";
+          document.documentElement.dir = "ltr";
+          document.title = "Text Translator | Persian ↔ English & 20+ languages";
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

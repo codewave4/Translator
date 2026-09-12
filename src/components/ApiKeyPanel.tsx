@@ -81,29 +81,37 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     models: settings.models,
   });
 
-  /** دریافت مدل‌ها؛ در صورت شکست، لیست پیش‌فرض */
-  const loadModels = async (s: ApiSettings, keep: string) => {
+  /** دریافت مدل‌ها؛ در صورت شکست، لیست پیش‌فرض. مدل انتخاب‌شده را برمی‌گرداند */
+  const loadModels = async (s: ApiSettings, keep: string): Promise<string> => {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoadingModels(true);
     setModels([]);
+    let picked = "";
     try {
       const list = await fetchModels(s, ctrl.signal);
-      if (ctrl.signal.aborted) return;
+      if (ctrl.signal.aborted) return "";
       setModels(list);
       setLive(true);
       const ids = list.map((m) => m.id);
-      setSelected(keep && ids.includes(keep) ? keep : recommendedModel(provider.id, ids));
+      picked = keep && ids.includes(keep) ? keep : recommendedModel(provider.id, ids);
     } catch (e) {
-      if ((e as Error).name === "AbortError") return;
+      if ((e as Error).name === "AbortError") return "";
+      // اگر خود کلید نامعتبر باشد، خطا را بالا بفرست تا پیام درست نشان داده شود
+      if (e instanceof ProviderError && e.kind === "unauthorized") {
+        setLoadingModels(false);
+        throw e;
+      }
       const fallback = provider.models.map((id) => ({ id, free: provider.free || /:free$/.test(id) }));
       setModels(fallback);
       setLive(false);
-      setSelected(keep && provider.models.includes(keep) ? keep : provider.models[0]);
+      picked = keep && provider.models.includes(keep) ? keep : provider.models[0];
     } finally {
       if (!ctrl.signal.aborted) setLoadingModels(false);
     }
+    setSelected(picked);
+    return picked;
   };
 
   // با تعویض سرویس: اگر کلید تأییدشده دارد → مستقیم مرحله ۳، وگرنه مرحله ۲
@@ -119,7 +127,11 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     setModels([]);
     setLive(null);
     setSelected(m);
-    if (k) void loadModels({ provider: provider.id, keys: settings.keys, models: settings.models }, m);
+    if (k) {
+      void loadModels({ provider: provider.id, keys: settings.keys, models: settings.models }, m).catch(
+        () => setVerified(false)
+      );
+    }
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.id]);
@@ -146,13 +158,18 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     setOkMs(null);
     try {
       const s = draft();
-      const ms = await testProvider(s);
+      // ۱) اول لیست مدل‌ها را از خود سرویس بگیر (کلید را هم تأیید می‌کند)
+      const model = await loadModels(s, savedModel);
+      if (!model) return;
+      // ۲) بعد با مدلی که واقعاً وجود دارد، یک ترجمه کوتاه تست کن
+      const ms = await testProvider(s, undefined, model);
       setOkMs(ms);
       setVerified(true);
       notify(t("n_api_ok", { ms: n(ms) }), "success");
-      await loadModels(s, savedModel);
     } catch (e) {
       setVerified(false);
+      setModels([]);
+      setLive(null);
       notify(providerErrorMessage(e, t, provider.name), "error");
     } finally {
       setTesting(false);

@@ -114,6 +114,18 @@ export const dict = {
   api_show_less: { fa: "نمایش کمتر", en: "Show less" },
   api_free_only: { fa: "فقط رایگان", en: "Free only" },
   api_change_key: { fa: "تغییر کلید", en: "Change key" },
+  api_more_name: { fa: "سرویس‌های بیشتر", en: "More providers" },
+  api_more_badge: { fa: "خودکار", en: "Auto" },
+  api_more_hint: {
+    fa: "کلید هر یک از این سرویس‌ها را بچسبان؛ سرویس خودکار از روی کلید تشخیص داده می‌شود: {list}",
+    en: "Paste a key from any of these providers; the service is detected automatically from the key: {list}",
+  },
+  api_more_detected: { fa: "تشخیص داده شد: {provider}", en: "Detected: {provider}" },
+  api_more_unknown: {
+    fa: "سرویس این کلید شناخته نشد. کلیدهای پشتیبانی‌شده: {list}",
+    en: "Couldn't recognize this key. Supported keys: {list}",
+  },
+  n_api_detected: { fa: "کلید {provider} شناسایی شد", en: "{provider} key detected" },
   api_vpn_note: {
     fa: "نکته: OpenAI و Gemini از IP ایران در دسترس نیستند و به VPN نیاز دارند؛ Groq، OpenRouter و Mistral معمولاً راحت‌تر جواب می‌دهند.",
     en: "Note: some providers are region-restricted; Groq, OpenRouter and Mistral are usually the most accessible.",

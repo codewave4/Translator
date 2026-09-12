@@ -16,8 +16,11 @@ import {
   Trash2,
 } from "lucide-react";
 import {
-  PROVIDERS,
+  MAIN_PROVIDERS,
+  MORE,
+  MORE_PROVIDERS,
   ProviderError,
+  detectMoreProvider,
   fetchModels,
   providerById,
   recommendedModel,
@@ -25,7 +28,7 @@ import {
   testProvider,
   type ApiSettings,
   type ModelInfo,
-  type ProviderId,
+  type ProviderChoice,
 } from "../lib/providers";
 import type { Notify } from "../lib/translator";
 import { useI18n } from "../lib/i18n";
@@ -58,6 +61,11 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
   const savedKey = (settings.keys[provider.id] ?? "").trim();
   const savedModel = settings.models[provider.id] ?? "";
 
+  // حالت «سرویس‌های بیشتر»: سرویس واقعی از روی کلید تشخیص داده می‌شود
+  const [moreMode, setMoreMode] = useState<boolean>(!!provider.hidden);
+  const isMore = moreMode || !!provider.hidden;
+  const moreNames = MORE_PROVIDERS.map((p) => p.name).join("، ");
+
   // مرحله ۱: سرویس | مرحله ۲: کلید + تست | مرحله ۳: انتخاب مدل
   const [keyDraft, setKeyDraft] = useState(savedKey);
   const [verified, setVerified] = useState(!!savedKey);
@@ -82,7 +90,8 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
   });
 
   /** دریافت مدل‌ها؛ در صورت شکست، لیست پیش‌فرض. مدل انتخاب‌شده را برمی‌گرداند */
-  const loadModels = async (s: ApiSettings, keep: string): Promise<string> => {
+  const loadModels = async (s: ApiSettings, keep: string, pid = provider.id): Promise<string> => {
+    const p = providerById(pid);
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -95,7 +104,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
       setModels(list);
       setLive(true);
       const ids = list.map((m) => m.id);
-      picked = keep && ids.includes(keep) ? keep : recommendedModel(provider.id, ids);
+      picked = keep && ids.includes(keep) ? keep : recommendedModel(p.id, ids);
     } catch (e) {
       if ((e as Error).name === "AbortError") return "";
       // اگر خود کلید نامعتبر باشد، خطا را بالا بفرست تا پیام درست نشان داده شود
@@ -103,10 +112,10 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
         setLoadingModels(false);
         throw e;
       }
-      const fallback = provider.models.map((id) => ({ id, free: provider.free || /:free$/.test(id) }));
+      const fallback = p.models.map((id) => ({ id, free: p.free || /:free$/.test(id) }));
       setModels(fallback);
       setLive(false);
-      picked = keep && provider.models.includes(keep) ? keep : provider.models[0];
+      picked = keep && p.models.includes(keep) ? keep : p.models[0];
     } finally {
       if (!ctrl.signal.aborted) setLoadingModels(false);
     }
@@ -114,8 +123,15 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     return picked;
   };
 
+  // وقتی سرویس به‌صورت خودکار از روی کلید تشخیص داده می‌شود، فرم نباید ریست شود
+  const skipResetRef = useRef(false);
+
   // با تعویض سرویس: اگر کلید تأییدشده دارد → مستقیم مرحله ۳، وگرنه مرحله ۲
   useEffect(() => {
+    if (skipResetRef.current) {
+      skipResetRef.current = false;
+      return;
+    }
     const k = (settings.keys[provider.id] ?? "").trim();
     const m = settings.models[provider.id] ?? "";
     setKeyDraft(k);
@@ -136,7 +152,30 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider.id]);
 
-  const pickProvider = (id: ProviderId) => onChange({ ...settings, provider: id });
+  const pickProvider = (id: ProviderChoice) => {
+    if (id === MORE) {
+      // اگر قبلاً کلید یکی از سرویس‌های «بیشتر» ذخیره شده، همان را باز کن
+      const saved = MORE_PROVIDERS.find((p) => (settings.keys[p.id] ?? "").trim());
+      setMoreMode(true);
+      if (saved) {
+        onChange({ ...settings, provider: saved.id });
+      } else if (!provider.hidden) {
+        // هنوز کلیدی نداریم؛ فرم را خالی کن تا کاربر کلید بچسباند
+        setKeyDraft("");
+        setVerified(false);
+        setOkMs(null);
+        setModels([]);
+        setLive(null);
+        setSelected("");
+      }
+      return;
+    }
+    setMoreMode(false);
+    onChange({ ...settings, provider: id });
+  };
+
+  /** سرویس تشخیص‌داده‌شده از روی کلید فعلی (فقط در حالت «بیشتر») */
+  const detected = isMore ? detectMoreProvider(keyDraft) : null;
 
   const onKeyInput = (v: string) => {
     setKeyDraft(v);
@@ -157,9 +196,28 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     setTesting(true);
     setOkMs(null);
     try {
-      const s = draft();
+      let s = draft();
+      // در حالت «سرویس‌های بیشتر»: اول سرویس را از روی شکل کلید تشخیص بده
+      if (isMore) {
+        const hit = detectMoreProvider(keyDraft);
+        if (!hit) {
+          notify(t("api_more_unknown", { list: moreNames }), "error");
+          return;
+        }
+        s = {
+          provider: hit.id,
+          keys: { ...settings.keys, [hit.id]: keyDraft.trim() },
+          models: settings.models,
+        };
+        if (hit.id !== provider.id) {
+          notify(t("n_api_detected", { provider: hit.name }), "info");
+          skipResetRef.current = true; // فرم (و کلید تایپ‌شده) حفظ شود
+          onChange({ ...settings, provider: hit.id });
+        }
+      }
+      const pid = s.provider;
       // ۱) اول لیست مدل‌ها را از خود سرویس بگیر (کلید را هم تأیید می‌کند)
-      const model = await loadModels(s, savedModel);
+      const model = await loadModels(s, settings.models[pid] ?? "", pid);
       if (!model) return;
       // ۲) بعد با مدلی که واقعاً وجود دارد، یک ترجمه کوتاه تست کن
       const ms = await testProvider(s, undefined, model);
@@ -253,8 +311,8 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
           {t("api_provider")}
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
-          {PROVIDERS.map((p) => {
-            const active = p.id === provider.id;
+          {MAIN_PROVIDERS.map((p) => {
+            const active = !isMore && p.id === provider.id;
             const has = !!(settings.keys[p.id] ?? "").trim();
             return (
               <button
@@ -282,7 +340,61 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
               </button>
             );
           })}
+
+          {/* دکمه «سرویس‌های بیشتر» — سرویس از روی کلید تشخیص داده می‌شود */}
+          {(() => {
+            const active = isMore;
+            const has = MORE_PROVIDERS.some((p) => (settings.keys[p.id] ?? "").trim());
+            const label = active && provider.hidden ? provider.name : t("api_more_name");
+            return (
+              <button
+                type="button"
+                onClick={() => pickProvider(MORE)}
+                title={t("api_more_hint", { list: moreNames })}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-black transition active:scale-95",
+                  active
+                    ? "bg-pine-950 text-white shadow-md dark:bg-gold-400 dark:text-pine-950"
+                    : "bg-white text-ink/70 ring-1 ring-pine-900/10 hover:text-pine-950 dark:bg-white/8 dark:text-white/70 dark:ring-white/10 dark:hover:text-white"
+                )}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{
+                    background:
+                      active && provider.hidden
+                        ? provider.color
+                        : "conic-gradient(#F15A29, #6720FF, #0F6FFF, #4D6BFE, #EE4C2C, #F15A29)",
+                  }}
+                />
+                {label}
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px]",
+                    active ? "bg-white/15 dark:bg-pine-950/15" : "bg-pine-950/6 dark:bg-white/10"
+                  )}
+                >
+                  {active && provider.hidden ? (provider.free ? t("api_free") : t("api_paid")) : t("api_more_badge")}
+                </span>
+                {has && <Check className="h-3.5 w-3.5 text-emerald-500" strokeWidth={3} />}
+              </button>
+            );
+          })()}
         </div>
+
+        {/* راهنمای سرویس‌های بیشتر + تشخیص زنده کلید */}
+        {isMore && !verified && (
+          <p className="mt-2 text-[12px] leading-6 text-ink/55 dark:text-white/55">
+            {detected ? (
+              <span className="inline-flex items-center gap-1.5 font-black text-emerald-600 dark:text-emerald-400">
+                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                {t("api_more_detected", { provider: detected.name })}
+              </span>
+            ) : (
+              t("api_more_hint", { list: moreNames })
+            )}
+          </p>
+        )}
 
         {/* مرحله ۲: کلید + تست */}
         <div className="mt-4">
@@ -291,18 +403,21 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
               <span className="grid h-5 w-5 place-items-center rounded-full bg-pine-950 text-[11px] text-white dark:bg-gold-400 dark:text-pine-950">{n(2)}</span>
               {t("api_key_label")}{" "}
               <span className="font-mono text-[11px] text-ink/40 dark:text-white/40" dir="ltr">
-                ({provider.keyHint})
+                ({(detected ?? (isMore && !provider.hidden ? null : provider))?.keyHint ?? "…"})
               </span>
             </label>
-            <a
-              href={provider.keyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[12px] font-black text-clay-600 hover:underline dark:text-gold-400"
-            >
-              {t("api_get_key")}
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            {(detected ?? (isMore && !provider.hidden ? null : provider)) && (
+              <a
+                href={(detected ?? provider).keyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[12px] font-black text-clay-600 hover:underline dark:text-gold-400"
+              >
+                {t("api_get_key")}
+                {detected && <span className="font-medium">({detected.name})</span>}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
 
           {verified ? (

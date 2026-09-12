@@ -59,9 +59,10 @@ export const PROVIDERS: ProviderInfo[] = [
     keyUrl: "https://openrouter.ai/settings/keys",
     keyHint: "sk-or-…",
     models: [
+      "openrouter/auto",
       "meta-llama/llama-3.3-70b-instruct:free",
-      "google/gemini-2.0-flash-exp:free",
-      "mistralai/mistral-7b-instruct:free",
+      "qwen/qwen3-235b-a22b:free",
+      "mistralai/mistral-small-3.2-24b-instruct:free",
       "openai/gpt-4o-mini",
       "anthropic/claude-3.5-haiku",
       "deepseek/deepseek-chat",
@@ -308,10 +309,17 @@ export async function providerTranslate(
   return clean(raw);
 }
 
-/** تست اتصال: یک ترجمه خیلی کوتاه؛ زمان پاسخ را برمی‌گرداند */
-export async function testProvider(settings: ApiSettings, signal?: AbortSignal): Promise<number> {
+/** تست اتصال: یک ترجمه خیلی کوتاه با مدل مشخص؛ زمان پاسخ را برمی‌گرداند */
+export async function testProvider(
+  settings: ApiSettings,
+  signal?: AbortSignal,
+  model?: string
+): Promise<number> {
+  const s: ApiSettings = model
+    ? { ...settings, models: { ...settings.models, [settings.provider]: model } }
+    : settings;
   const t0 = performance.now();
-  await providerTranslate(settings, "Hello", "en", "fa", signal);
+  await providerTranslate(s, "Hello", "en", "fa", signal);
   return Math.round(performance.now() - t0);
 }
 
@@ -380,8 +388,22 @@ export async function fetchModels(settings: ApiSettings, signal?: AbortSignal): 
     const res = await doFetch(base, { method: "GET", headers }, signal);
     if (!res.ok) throw new ProviderError(kindFromStatus(res.status), await readError(res));
     const data = await res.json().catch(() => null);
-    const list: { id?: string; pricing?: { prompt?: string; completion?: string } }[] = Array.isArray(data?.data) ? data.data : [];
-    ids = list.map((m) => String(m.id ?? "")).filter(Boolean);
+    const list: {
+      id?: string;
+      pricing?: { prompt?: string; completion?: string };
+      architecture?: { output_modalities?: string[]; modality?: string };
+    }[] = Array.isArray(data?.data) ? data.data : [];
+    ids = list
+      .filter((m) => {
+        if (p.id !== "openrouter") return true;
+        // فقط مدل‌هایی که خروجی متنی دارند
+        const out = m.architecture?.output_modalities;
+        if (Array.isArray(out)) return out.includes("text");
+        const mod = m.architecture?.modality;
+        return !mod || /->text/.test(mod);
+      })
+      .map((m) => String(m.id ?? ""))
+      .filter(Boolean);
     if (p.id === "openrouter") {
       freeSet = new Set(
         list

@@ -437,6 +437,162 @@ export async function testProvider(
   return Math.round(performance.now() - t0);
 }
 
+/* ---------------- چت با هوش مصنوعی (استریم) ---------------- */
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+const CHAT_SYSTEM =
+  "You are a helpful, friendly assistant. Always reply in the same language the user writes in " +
+  "(if they write in Persian/Farsi, reply in fluent Persian). Be clear and concise; use Markdown-free plain text " +
+  "unless the user asks for code or lists.";
+
+/** حداکثر پیام‌های قبلی که به مدل فرستاده می‌شود (کنترل هزینه و سرعت) */
+const CHAT_HISTORY_LIMIT = 20;
+
+/** خواندن استریم SSE و استخراج تکه‌های متن */
+async function readSse(
+  res: Response,
+  extract: (json: unknown) => string,
+  onToken: (t: string) => void
+): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) throw new ProviderError("generic");
+  const dec = new TextDecoder();
+  let buf = "";
+  let full = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const piece = extract(JSON.parse(payload));
+        if (piece) {
+          full += piece;
+          onToken(piece);
+        }
+      } catch {
+        /* تکه ناقص JSON — رد می‌شود */
+      }
+    }
+  }
+  return full;
+}
+
+/**
+ * ارسال گفتگو به سرویس انتخابی و دریافت پاسخ به‌صورت زنده.
+ * onToken با هر تکه متن صدا زده می‌شود؛ متن کامل برگردانده می‌شود.
+ */
+export async function providerChat(
+  settings: ApiSettings,
+  history: ChatMessage[],
+  onToken: (t: string) => void,
+  signal?: AbortSignal
+): Promise<string> {
+  const p = providerById(settings.provider);
+  const key = activeKey(settings);
+  const model = activeModel(settings);
+  if (!key) throw new ProviderError("unauthorized");
+  const msgs = history.slice(-CHAT_HISTORY_LIMIT);
+
+  if (p.id === "gemini") {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      model
+    )}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+    const res = await doFetch(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: CHAT_SYSTEM }] },
+          contents: msgs.map((m) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content }],
+          })),
+          generationConfig: { temperature: 0.7 },
+        }),
+      },
+      signal
+    );
+    if (!res.ok) {
+      const msg = await readError(res);
+      const kind = res.status === 400 && /api key/i.test(msg) ? "unauthorized" : kindFromStatus(res.status);
+      throw new ProviderError(kind, msg);
+    }
+    const full = await readSse(
+      res,
+      (j) => {
+        const parts = (j as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+          ?.candidates?.[0]?.content?.parts;
+        return Array.isArray(parts) ? parts.map((x) => x.text ?? "").join("") : "";
+      },
+      onToken
+    );
+    if (!full.trim()) throw new ProviderError("generic");
+    return full;
+  }
+
+  // سرویس‌های سازگار با OpenAI
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${key}`,
+  };
+  if (p.id === "openrouter") {
+    headers["HTTP-Referer"] = typeof location !== "undefined" ? location.origin : "https://github.com";
+    headers["X-Title"] = "Text Translator";
+  }
+  const res = await doFetch(
+    p.endpoint!,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model,
+        temperature: 0.7,
+        stream: true,
+        messages: [{ role: "system", content: CHAT_SYSTEM }, ...msgs],
+      }),
+    },
+    signal
+  );
+  if (!res.ok) {
+    const msg = await readError(res);
+    const kind = res.status === 400 && /model/i.test(msg) ? "model" : kindFromStatus(res.status);
+    throw new ProviderError(kind, msg);
+  }
+
+  const ctype = res.headers.get("content-type") ?? "";
+  if (!ctype.includes("text/event-stream")) {
+    // سرویس استریم نداد؛ پاسخ یک‌جا
+    const data = await res.json().catch(() => null);
+    const text = data?.choices?.[0]?.message?.content;
+    if (typeof text !== "string" || !text.trim()) throw new ProviderError("generic");
+    onToken(text);
+    return text;
+  }
+
+  const full = await readSse(
+    res,
+    (j) => {
+      const d = (j as { choices?: { delta?: { content?: string | null } }[] })?.choices?.[0]?.delta;
+      return typeof d?.content === "string" ? d.content : "";
+    },
+    onToken
+  );
+  if (!full.trim()) throw new ProviderError("generic");
+  return full.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+}
+
 /* ---------------- لیست زنده مدل‌ها ---------------- */
 
 export interface ModelInfo {

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, BadgeCheck, CheckCircle2, Info } from "lucide-react";
-import Header from "./components/Header";
+import Header, { type Tab } from "./components/Header";
 import Translator from "./components/Translator";
+import Chat from "./components/Chat";
 import { Features, Footer } from "./components/Sections";
 import { LANGUAGES, type ToastType } from "./lib/translator";
 import {
@@ -36,6 +37,8 @@ const toastStyle: Record<ToastType, { cls: string; Icon: typeof Info }> = {
   },
 };
 
+const TAB_KEY = "salam-tr-tab";
+
 export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() =>
     typeof document !== "undefined" &&
@@ -44,6 +47,15 @@ export default function App() {
       : "light"
   );
   const [lang, setLang] = useState<UiLang>(readStoredLang);
+  const [tab, setTab] = useState<Tab>(() => {
+    try {
+      return localStorage.getItem(TAB_KEY) === "chat" ? "chat" : "translate";
+    } catch {
+      return "translate";
+    }
+  });
+  /** وقتی از چت روی «تنظیم کلید» می‌زنیم، پنل کلید در مترجم باز شود */
+  const [openApiSignal, setOpenApiSignal] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const i18n = useMemo(() => createI18n(lang, setLang), [lang]);
@@ -70,11 +82,25 @@ export default function App() {
     }
   }, [lang]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(TAB_KEY, tab);
+    } catch {
+      /* noop */
+    }
+  }, [tab]);
+
   const notify = useCallback((msg: string, type: ToastType = "success") => {
     const id = Date.now() + Math.random();
     setToasts((p) => [...p.slice(-2), { id, msg, type }]);
     setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 2800);
   }, []);
+
+  const goSetupKey = () => {
+    setTab("translate");
+    setOpenApiSignal((v) => v + 1);
+    setTimeout(() => document.getElementById("translator")?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
 
   return (
     <I18nContext.Provider value={i18n}>
@@ -82,69 +108,80 @@ export default function App() {
         <Header
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          tab={tab}
+          onTab={setTab}
         />
 
-        {/* hero */}
-        <div className="relative overflow-hidden">
-          <div className="pattern-girih-dark absolute inset-0 opacity-70 dark:hidden" />
-          <div className="pattern-girih absolute inset-0 hidden dark:block" />
-          <div className="absolute -top-32 right-1/4 h-72 w-72 rounded-full bg-clay-500/15 blur-[110px] dark:bg-clay-600/20" />
-          <div className="absolute -top-20 left-1/4 h-72 w-72 rounded-full bg-gold-500/15 blur-[110px]" />
+        {/* hero (فقط در تب مترجم) */}
+        {tab === "translate" && (
+          <div className="relative overflow-hidden">
+            <div className="pattern-girih-dark absolute inset-0 opacity-70 dark:hidden" />
+            <div className="pattern-girih absolute inset-0 hidden dark:block" />
+            <div className="absolute -top-32 right-1/4 h-72 w-72 rounded-full bg-clay-500/15 blur-[110px] dark:bg-clay-600/20" />
+            <div className="absolute -top-20 left-1/4 h-72 w-72 rounded-full bg-gold-500/15 blur-[110px]" />
 
-          <div className="relative mx-auto max-w-6xl px-4 pb-2 pt-12 text-center sm:px-6 sm:pt-16">
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[13px] font-black text-pine-800 shadow-sm ring-1 ring-pine-900/10 dark:bg-white/8 dark:text-gold-400 dark:ring-white/10"
-            >
-              <BadgeCheck className="h-4 w-4 text-emerald-500" />
-              {t("hero_badge", { n: n(LANGUAGES.length) })}
-            </motion.div>
-            <motion.h1
-              key={`h1-${lang}`}
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.08 }}
-              className="mt-5 text-4xl font-black leading-[1.6] text-pine-950 sm:text-5xl sm:leading-[1.6] dark:text-white"
-            >
-              {t("hero_title_before")}
-              <span className="text-clay-500"> {t("hero_title_accent")} </span>
-              {t("hero_title_after")}
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.16 }}
-              className="mx-auto mt-3 max-w-2xl text-[15px] leading-8 text-ink/60 sm:text-base dark:text-white/60"
-            >
-              {t("hero_desc", { n: n(20) })}
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 22 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.24 }}
-              className="mt-6 flex flex-wrap items-center justify-center gap-2"
-            >
-              <a
-                href="#translator"
-                className="rounded-2xl bg-pine-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-clay-600 dark:bg-gold-400 dark:text-pine-950 dark:hover:bg-gold-500"
+            <div className="relative mx-auto max-w-6xl px-4 pb-2 pt-12 text-center sm:px-6 sm:pt-16">
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[13px] font-black text-pine-800 shadow-sm ring-1 ring-pine-900/10 dark:bg-white/8 dark:text-gold-400 dark:ring-white/10"
               >
-                {t("hero_cta_start")}
-              </a>
-              <a
-                href="#history"
-                className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-pine-950 shadow-md ring-1 ring-pine-900/10 transition hover:-translate-y-0.5 hover:ring-clay-500/40 dark:bg-white/8 dark:text-white dark:ring-white/15 dark:hover:bg-white/12"
+                <BadgeCheck className="h-4 w-4 text-emerald-500" />
+                {t("hero_badge", { n: n(LANGUAGES.length) })}
+              </motion.div>
+              <motion.h1
+                key={`h1-${lang}`}
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.08 }}
+                className="mt-5 text-4xl font-black leading-[1.6] text-pine-950 sm:text-5xl sm:leading-[1.6] dark:text-white"
               >
-                {t("nav_history")}
-              </a>
-            </motion.div>
+                {t("hero_title_before")}
+                <span className="text-clay-500"> {t("hero_title_accent")} </span>
+                {t("hero_title_after")}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.16 }}
+                className="mx-auto mt-3 max-w-2xl text-[15px] leading-8 text-ink/60 sm:text-base dark:text-white/60"
+              >
+                {t("hero_desc", { n: n(20) })}
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: 0.24 }}
+                className="mt-6 flex flex-wrap items-center justify-center gap-2"
+              >
+                <a
+                  href="#translator"
+                  className="rounded-2xl bg-pine-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-clay-600 dark:bg-gold-400 dark:text-pine-950 dark:hover:bg-gold-500"
+                >
+                  {t("hero_cta_start")}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setTab("chat")}
+                  className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-pine-950 shadow-md ring-1 ring-pine-900/10 transition hover:-translate-y-0.5 hover:ring-clay-500/40 dark:bg-white/8 dark:text-white dark:ring-white/15 dark:hover:bg-white/12"
+                >
+                  {t("chat_title")}
+                </button>
+              </motion.div>
+            </div>
           </div>
-        </div>
+        )}
 
         <main className="pb-4">
-          <Translator notify={notify} />
-          <Features />
+          {tab === "translate" ? (
+            <>
+              <Translator notify={notify} openApiSignal={openApiSignal} />
+              <Features />
+            </>
+          ) : (
+            <Chat notify={notify} onSetupKey={goSetupKey} />
+          )}
         </main>
         <Footer />
 

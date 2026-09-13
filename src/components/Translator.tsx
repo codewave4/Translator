@@ -102,7 +102,14 @@ function EngineIcon({ id, className }: { id: Engine; className?: string }) {
   return <Wand2 className={cn("text-violet-500", className)} />;
 }
 
-export default function Translator({ notify }: { notify: Notify }) {
+export default function Translator({
+  notify,
+  openApiSignal = 0,
+}: {
+  notify: Notify;
+  /** هر بار که عوض شود، موتور «کلید اختصاصی» انتخاب و پنل کلید باز می‌شود (از تب چت) */
+  openApiSignal?: number;
+}) {
   const i18n = useI18n();
   const { t, n, ln, lang } = i18n;
 
@@ -151,6 +158,13 @@ export default function Translator({ notify }: { notify: Notify }) {
   useEffect(() => {
     if (engine === "custom" && !hasActiveKey(api)) setShowApi(true);
   }, [engine, api]);
+  // درخواست از تب چت: موتور «کلید اختصاصی» + باز کردن پنل
+  useEffect(() => {
+    if (openApiSignal > 0) {
+      setEngine("custom");
+      setShowApi(true);
+    }
+  }, [openApiSignal]);
   useEffect(
     () => () => {
       abortRef.current?.abort();

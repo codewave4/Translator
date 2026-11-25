@@ -178,10 +178,105 @@ function decodeHtml(s: string): string {
   return el.value;
 }
 
+/* ---------------- دیکشنری (فقط موتور گوگل، برای واژه و عبارت کوتاه) ---------------- */
+
+export interface DictSense {
+  /** ترجمه این معنی */
+  term: string;
+  /** واژه‌های زبان مبدأ که به همین معنی برمی‌گردند */
+  reverse: string[];
+  /** امتیاز رواج (هرچه بیشتر، پرتکرارتر) */
+  score: number;
+}
+
+export interface DictGroup {
+  /** نقش دستوری به انگلیسی، مثل verb و noun */
+  pos: string;
+  senses: DictSense[];
+}
+
+export interface DictData {
+  word: string;
+  groups: DictGroup[];
+  synonyms: string[];
+  examples: string[];
+}
+
+/** ورودی «واژه‌مانند» است؟ (کوتاه، حداکثر سه کلمه، بدون خط جدید) */
+export const isWordLike = (q: string): boolean => {
+  const t = q.trim();
+  return t.length > 0 && t.length <= 40 && !/\n/.test(t) && t.split(/\s+/).length <= 3;
+};
+
+/**
+ * استخراج داده دیکشنری از پاسخ خام گوگل:
+ * data[1] معنی‌ها بر اساس نقش دستوری، data[11] مترادف‌ها، data[13] جمله‌های مثال
+ */
+export function parseDict(data: unknown, word: string): DictData | undefined {
+  if (!Array.isArray(data)) return undefined;
+
+  const groups: DictGroup[] = [];
+  const rawGroups = data[1];
+  if (Array.isArray(rawGroups)) {
+    for (const g of rawGroups) {
+      if (!Array.isArray(g)) continue;
+      const pos = typeof g[0] === "string" ? g[0] : "";
+      const entries = Array.isArray(g[2]) ? g[2] : [];
+      const senses: DictSense[] = [];
+      for (const e of entries) {
+        if (!Array.isArray(e) || typeof e[0] !== "string") continue;
+        const reverse = Array.isArray(e[1])
+          ? e[1].filter((x): x is string => typeof x === "string")
+          : [];
+        const score = typeof e[3] === "number" ? e[3] : 0;
+        senses.push({ term: e[0], reverse, score });
+        if (senses.length >= 5) break;
+      }
+      if (pos && senses.length) groups.push({ pos, senses });
+    }
+  }
+  if (!groups.length) return undefined;
+
+  const synonyms: string[] = [];
+  const rawSyn = data[11];
+  if (Array.isArray(rawSyn)) {
+    const seen = new Set<string>();
+    outer: for (const g of rawSyn) {
+      if (!Array.isArray(g) || !Array.isArray(g[1])) continue;
+      for (const entry of g[1]) {
+        if (!Array.isArray(entry) || !Array.isArray(entry[0])) continue;
+        for (const s of entry[0]) {
+          if (typeof s !== "string") continue;
+          const v = s.trim();
+          const k = v.toLowerCase();
+          if (!v || v.length > 20 || seen.has(k)) continue;
+          seen.add(k);
+          synonyms.push(v);
+          if (synonyms.length >= 8) break outer;
+        }
+      }
+    }
+  }
+
+  const examples: string[] = [];
+  const rawEx = data[13];
+  if (Array.isArray(rawEx)) {
+    for (const ex of rawEx) {
+      if (!Array.isArray(ex) || typeof ex[0] !== "string") continue;
+      const text = ex[0].replace(/<\/?b>/gi, "").trim();
+      if (text) examples.push(text);
+      if (examples.length >= 3) break;
+    }
+  }
+
+  return { word, groups, synonyms, examples };
+}
+
 interface ChunkOut {
   text: string;
   detected: string;
   alternatives: string[];
+  dict?: DictData;
 }
 
 /* ---------------- موتور گوگل ---------------- */
@@ -220,6 +315,12 @@ async function googlePrimary(
 ): Promise<ChunkOut> {
   const params = new URLSearchParams({ client: "gtx", sl, tl, dt: "t", q });
   params.append("dt", "at"); // ترجمه‌های جایگزین
+  const wantDict = isWordLike(q);
+  if (wantDict) {
+    params.append("dt", "bd"); // دیکشنری: معنی‌ها بر اساس نقش دستوری
+    params.append("dt", "ss"); // مترادف‌های زبان مبدأ
+    params.append("dt", "ex"); // جمله‌های مثال
+  }
   const data = (await googleFetch(
     `https://translate.googleapis.com/translate_a/single?${params.toString()}`,
     signal
@@ -250,7 +351,7 @@ async function googlePrimary(
   } catch {
     /* ساختار جایگزین‌ها مهم نیست */
   }
-  return { text, detected, alternatives };
+  return { text, detected, alternatives, dict: wantDict ? parseDict(data, q) : undefined };
 }
 
 /** endpoint پشتیبان: clients5.google.com (API دیکشنری کروم) */
@@ -363,6 +464,8 @@ export interface TranslateResult {
   chunks: number;
   detected: string;
   engine: EngineUsed;
+  /** فقط برای واژه و عبارت کوتاه با موتور گوگل پر می‌شود */
+  dict?: DictData;
 }
 
 export interface TranslateOptions {
@@ -394,6 +497,7 @@ async function runEngine(
   let detected = "";
   let done = 0;
   let firstAlternatives: string[] = [];
+  let dictData: DictData | undefined;
   const outParts: string[] = [];
 
   for (const p of parts) {
@@ -414,6 +518,7 @@ async function runEngine(
 
     if (!detected && r.detected && r.detected !== "auto") detected = r.detected;
     if (done === 0) firstAlternatives = r.alternatives;
+    if (done === 0 && r.dict) dictData = r.dict;
     outParts.push(r.text);
     done += 1;
     opts.onProgress?.(done, total);
@@ -444,6 +549,7 @@ async function runEngine(
     chunks: total,
     detected: detected || guessed,
     engine,
+    dict: total === 1 ? dictData : undefined,
   };
 }
 

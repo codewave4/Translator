@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRightLeft,
+  BookOpen,
   CalendarCheck,
   Check,
   ChevronDown,
@@ -16,6 +17,7 @@ import {
   Loader2,
   Mail,
   Mic,
+  Scale,
   Settings2,
   Sparkles,
   Type,
@@ -54,6 +56,7 @@ import {
   stopSpeak,
   store,
   translateText,
+  type DictData,
   type Engine,
   type EngineUsed,
   type HistoryItem,
@@ -102,6 +105,404 @@ function EngineIcon({ id, className }: { id: Engine; className?: string }) {
   return <Wand2 className={cn("text-violet-500", className)} />;
 }
 
+/* برچسب فارسی نقش‌های دستوری گوگل */
+const POS_FA: Record<string, string> = {
+  verb: "فعل",
+  noun: "اسم",
+  adjective: "صفت",
+  adverb: "قید",
+  pronoun: "ضمیر",
+  preposition: "حرف اضافه",
+  conjunction: "حرف ربط",
+  interjection: "حرف ندا",
+  article: "حرف تعریف",
+  abbreviation: "اختصار",
+  prefix: "پیشوند",
+  suffix: "پسوند",
+  determiner: "تعیین‌کننده",
+  numeral: "عدد",
+};
+
+const posLabel = (pos: string, lang: "fa" | "en") =>
+  lang === "fa"
+    ? (POS_FA[pos.toLowerCase()] ?? pos)
+    : pos.charAt(0).toUpperCase() + pos.slice(1);
+
+/* کارت دیکشنری — بعد از ترجمه بسته است و با ضربه باز می‌شود */
+function DictCard({
+  dict,
+  open,
+  onToggle,
+  exTr,
+  wordLang,
+}: {
+  dict: DictData;
+  open: boolean;
+  onToggle: () => void;
+  /** ترجمه جمله‌های مثال (با باز شدن کارت، تنبل‌وار گرفته می‌شود) */
+  exTr: Record<number, string>;
+  wordLang: string;
+}) {
+  const { t, lang } = useI18n();
+  const [speakingWord, setSpeakingWord] = useState(false);
+  const playWord = () => {
+    if (speakingWord) {
+      stopSpeak();
+      setSpeakingWord(false);
+      return;
+    }
+    setSpeakingWord(true);
+    speak(dict.word, langByCode(wordLang).speech, () => setSpeakingWord(false));
+  };
+  return (
+    <div className="mt-4 overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-pine-900/10 dark:bg-white/[0.04] dark:ring-white/10">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 p-4 text-start transition hover:bg-pine-950/[0.03] dark:hover:bg-white/[0.03]"
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-400 text-pine-950 shadow-sm">
+          <BookOpen className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-black text-pine-950 dark:text-white">
+            {t("dict_title")}
+          </span>
+          <span className="block truncate text-xs font-medium text-ink/45 dark:text-white/45">
+            {t("dict_sub")}
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 shrink-0 text-ink/40 transition-transform dark:text-white/40",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-pine-900/8 px-4 pt-3 pb-4 dark:border-white/10">
+              {/* واژه + پخش تلفظ */}
+              <div className="flex items-center gap-2">
+                <span dir="auto" className="text-lg font-black text-pine-950 dark:text-white">
+                  {dict.word}
+                </span>
+                <button
+                  type="button"
+                  onClick={playWord}
+                  title={t("btn_speak_src")}
+                  aria-label={t("btn_speak_src")}
+                  className="grid h-9 w-9 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15"
+                >
+                  {speakingWord ? (
+                    <VolumeX className="h-4 w-4 text-clay-500" />
+                  ) : (
+                    <Volume2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+
+              {/* معنی‌ها بر اساس نقش دستوری */}
+              {dict.groups.map((g, gi) => {
+                const max = Math.max(...g.senses.map((s) => s.score), 0.0001);
+                return (
+                  <div key={gi} className="mt-4">
+                    <span className="inline-block rounded-full bg-pine-950 px-3 py-1 text-xs font-black text-gold-400 dark:bg-white/10 dark:text-gold-300">
+                      {posLabel(g.pos, lang)}
+                    </span>
+                    <div className="mt-2 space-y-2.5">
+                      {g.senses.map((s, si) => (
+                        <div key={si} className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <span dir="auto" className="text-[15px] leading-7 font-bold text-ink dark:text-white">
+                              {s.term}
+                            </span>
+                            {s.reverse.length > 0 && (
+                              <span
+                                dir="ltr"
+                                className="ms-2 inline-block text-[13px] font-medium text-ink/40 dark:text-white/40"
+                              >
+                                {s.reverse.slice(0, 4).join(", ")}
+                              </span>
+                            )}
+                            {si === 0 && (
+                              <span className="ms-2 inline-block rounded-full bg-emerald-500/12 px-2 py-0.5 align-middle text-[11px] font-black text-emerald-600 dark:text-emerald-400">
+                                {gi === 0 ? t("dict_most_common") : t("dict_common")}
+                              </span>
+                            )}
+                          </div>
+                          {si < 3 && s.score > 0 && (
+                            <span className="mt-2.5 h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-pine-950/8 dark:bg-white/10">
+                              <span
+                                className="block h-full rounded-full bg-gradient-to-l from-clay-500 to-gold-400"
+                                style={{
+                                  width: `${Math.max(12, Math.round((s.score / max) * 100))}%`,
+                                }}
+                              />
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* مثال‌ها */}
+              {dict.examples.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-[13px] font-black text-ink/50 dark:text-white/50">
+                    {t("dict_examples")}
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {dict.examples.map((ex, i) => (
+                      <div key={i} className="rounded-2xl bg-cream p-3 dark:bg-white/5">
+                        <p dir="auto" className="text-sm leading-7 font-medium text-pine-900 dark:text-white">
+                          {ex}
+                        </p>
+                        {exTr[i] && (
+                          <p dir="auto" className="mt-0.5 text-sm leading-7 text-ink/55 dark:text-white/55">
+                            {exTr[i]}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* مترادف‌ها */}
+              {dict.synonyms.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-[13px] font-black text-ink/50 dark:text-white/50">
+                    {t("dict_synonyms")}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5" dir="auto">
+                    {dict.synonyms.map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-pine-950/5 px-3 py-1 text-[13px] font-bold text-pine-800 ring-1 ring-pine-900/8 dark:bg-white/8 dark:text-white/85 dark:ring-white/10"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* وضعیت اجرای یک موتور در مقایسه */
+interface CmpRun {
+  status: "loading" | "done" | "error";
+  text?: string;
+  ms?: number;
+  error?: string;
+}
+
+/* کارت مقایسهٔ موتورها — بسته است؛ با باز شدن، هر سه موتور هم‌زمان ترجمه می‌کنند */
+function CompareCard({
+  open,
+  onToggle,
+  runs,
+  usedEngine,
+  output,
+  hasKey,
+  providerName,
+  modelLabel,
+  speakingText,
+  onPick,
+  onCopy,
+  onSpeak,
+  onSetupKey,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  runs: Partial<Record<EngineUsed, CmpRun>>;
+  usedEngine: EngineUsed | null;
+  output: string;
+  hasKey: boolean;
+  providerName: string;
+  modelLabel: string;
+  speakingText: string | null;
+  onPick: (eng: EngineUsed, text: string) => void;
+  onCopy: (text: string) => void;
+  onSpeak: (text: string) => void;
+  onSetupKey: () => void;
+}) {
+  const { t, n, lang } = useI18n();
+  const order: EngineUsed[] = ["google", "mymemory", "custom"];
+  const nameOf = (eng: EngineUsed) =>
+    eng === "custom" ? t("cmp_ai") : engineName(eng, lang);
+  const subOf = (eng: EngineUsed) => {
+    if (eng === "custom") return `${providerName} · ${modelLabel} · ${t("cmp_with_key")}`;
+    return ENGINES.find((e) => e.id === eng)?.desc[lang] ?? "";
+  };
+  const smallBtn =
+    "grid h-9 w-9 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15";
+  return (
+    <div className="mt-4 overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-pine-900/10 dark:bg-white/[0.04] dark:ring-white/10">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 p-4 text-start transition hover:bg-pine-950/[0.03] dark:hover:bg-white/[0.03]"
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-400 text-pine-950 shadow-sm">
+          <Scale className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-black text-pine-950 dark:text-white">
+            {t("cmp_title")}
+          </span>
+          <span className="block truncate text-xs font-medium text-ink/45 dark:text-white/45">
+            {t("cmp_sub")}
+          </span>
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 shrink-0 text-ink/40 transition-transform dark:text-white/40",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-3 border-t border-pine-900/8 p-3 sm:p-4 dark:border-white/10">
+              {order.map((eng) => {
+                const run = runs[eng];
+                const noKey = eng === "custom" && !hasKey;
+                const isCurrent =
+                  !noKey && eng === usedEngine && run?.status === "done" && run.text === output;
+                return (
+                  <div
+                    key={eng}
+                    className={cn(
+                      "rounded-3xl bg-cream p-3.5 ring-1 dark:bg-white/[0.03]",
+                      isCurrent
+                        ? "ring-2 ring-emerald-500"
+                        : eng === "custom"
+                          ? "ring-gold-400/40 dark:ring-gold-400/30"
+                          : "ring-pine-900/8 dark:ring-white/10"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-pine-900/8 dark:bg-white/10 dark:ring-white/10">
+                        <EngineIcon id={eng} className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-black text-pine-950 dark:text-white">
+                          {nameOf(eng)}
+                        </span>
+                        <span className="block truncate text-[11px] font-medium text-ink/45 dark:text-white/45" dir="auto">
+                          {subOf(eng)}
+                        </span>
+                      </span>
+                      {run?.status === "done" && typeof run.ms === "number" && (
+                        <span className="shrink-0 rounded-full bg-pine-950/5 px-2.5 py-1 text-[11px] font-black text-ink/55 ring-1 ring-pine-900/8 dark:bg-white/8 dark:text-white/55 dark:ring-white/10">
+                          {t("cmp_time", { t: n((run.ms / 1000).toFixed(1)) })}
+                        </span>
+                      )}
+                    </div>
+
+                    {noKey ? (
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <span className="text-sm font-bold text-ink/50 dark:text-white/50">
+                          {t("cmp_need_key")}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={onSetupKey}
+                          className="ms-auto shrink-0 rounded-xl bg-pine-950 px-4 py-2 text-[13px] font-black text-white transition hover:bg-clay-600 active:scale-95 dark:bg-gold-400 dark:text-pine-950 dark:hover:bg-gold-500"
+                        >
+                          {t("cmp_setup_key")}
+                        </button>
+                      </div>
+                    ) : !run || run.status === "loading" ? (
+                      <div className="mt-3 space-y-2.5">
+                        <div className="skeleton h-4 w-11/12 rounded-lg bg-pine-950/8 dark:bg-white/8" />
+                        <div className="skeleton h-4 w-2/3 rounded-lg bg-pine-950/8 dark:bg-white/8" />
+                      </div>
+                    ) : run.status === "error" ? (
+                      <p className="mt-2 text-sm leading-7 font-bold text-red-500">
+                        {run.error ?? t("cmp_failed")}
+                      </p>
+                    ) : (
+                      <>
+                        <p dir="auto" className="mt-2 text-[15px] leading-8 font-medium whitespace-pre-wrap text-ink dark:text-white">
+                          {run.text}
+                        </p>
+                        <div className="mt-2.5 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => run.text && onCopy(run.text)}
+                            title={t("btn_copy_tr")}
+                            aria-label={t("btn_copy_tr")}
+                            className={smallBtn}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => run.text && onSpeak(run.text)}
+                            title={t("btn_speak_tgt")}
+                            aria-label={t("btn_speak_tgt")}
+                            className={smallBtn}
+                          >
+                            {speakingText === run.text ? (
+                              <VolumeX className="h-4 w-4 text-clay-500" />
+                            ) : (
+                              <Volume2 className="h-4 w-4" />
+                            )}
+                          </button>
+                          {isCurrent ? (
+                            <span className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-3 py-1.5 text-[12px] font-black text-emerald-600 ring-1 ring-emerald-500/25 dark:text-emerald-400">
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                              {t("cmp_current")}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => run.text && onPick(eng, run.text)}
+                              className="ms-auto shrink-0 rounded-xl bg-clay-500 px-4 py-2 text-[13px] font-black text-white shadow-lg shadow-clay-500/25 transition hover:bg-clay-600 active:scale-95"
+                            >
+                              {t("cmp_pick")}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function Translator({
   notify,
   openApiSignal = 0,
@@ -144,8 +545,17 @@ export default function Translator({
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  /* دیکشنری و مقایسهٔ موتورها — هر دو به ترجمهٔ فعلی وابسته‌اند */
+  const [dict, setDict] = useState<DictData | undefined>(undefined);
+  const [dictOpen, setDictOpen] = useState(false);
+  const [dictExTr, setDictExTr] = useState<Record<number, string>>({});
+  const [cmpOpen, setCmpOpen] = useState(false);
+  const [cmpRuns, setCmpRuns] = useState<Partial<Record<EngineUsed, CmpRun>>>({});
+  const [cmpKey, setCmpKey] = useState("");
+  const [cmpSpeaking, setCmpSpeaking] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const cmpAbortRef = useRef<AbortController | null>(null);
   const recRef = useRef<any>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -168,6 +578,7 @@ export default function Translator({
   useEffect(
     () => () => {
       abortRef.current?.abort();
+      cmpAbortRef.current?.abort();
       stopSpeak();
       try {
         recRef.current?.stop?.();
@@ -186,6 +597,43 @@ export default function Translator({
     el.style.height = Math.min(Math.max(el.scrollHeight, 170), 340) + "px";
   }, [input]);
 
+  /** افزودن به تاریخچه؛ ترجمهٔ تکراریِ پشت‌سرهم دوباره ثبت نمی‌شود.
+      با replaceTop، متنِ رکوردِ بالای فهرست جایگزین می‌شود (انتخاب از مقایسه). */
+  const addToHistory = (
+    sourceText: string,
+    translatedText: string,
+    histSrc: string,
+    target: string,
+    eng: EngineUsed,
+    replaceTop = false
+  ) => {
+    setHistory((prev) => {
+      const sameTop =
+        prev[0]?.sourceText === sourceText.slice(0, 500) &&
+        prev[0]?.src === histSrc &&
+        prev[0]?.tgt === target;
+      if (sameTop && !replaceTop) return prev;
+      const item: HistoryItem = {
+        id:
+          sameTop && replaceTop
+            ? prev[0].id
+            : typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : String(Date.now()),
+        src: histSrc,
+        tgt: target,
+        sourceText: sourceText.slice(0, 500),
+        translatedText: translatedText.slice(0, 500),
+        time: Date.now(),
+        fav: sameTop && replaceTop ? prev[0].fav : false,
+        engine: eng,
+      };
+      const next = [item, ...(sameTop && replaceTop ? prev.slice(1) : prev)].slice(0, 100);
+      saveHistory(next);
+      return next;
+    });
+  };
+
   const doTranslate = useCallback(
     async (text?: string, s?: string, tg?: string) => {
       const value = (text ?? input).trim();
@@ -193,6 +641,9 @@ export default function Translator({
         setOutput("");
         setAlternatives([]);
         setDetected("");
+        setDict(undefined);
+        setDictOpen(false);
+        setCmpOpen(false);
         return;
       }
       abortRef.current?.abort();
@@ -237,34 +688,17 @@ export default function Translator({
         setOutput(res.text);
         setAlternatives(res.alternatives);
         setUsedEngine(res.engine);
+        setDict(res.dict);
+        setDictOpen(false);
+        setDictExTr({});
+        setCmpRuns({});
+        setCmpKey("");
+        setCmpOpen(false);
         if (source === "auto") setDetected(res.detected);
         setStats(recordTranslation(value.length));
 
         const histSrc = isKnownLang(res.detected) ? res.detected : "auto";
-        setHistory((prev) => {
-          if (
-            prev[0]?.sourceText === value.slice(0, 500) &&
-            prev[0]?.src === histSrc &&
-            prev[0]?.tgt === target
-          )
-            return prev;
-          const item: HistoryItem = {
-            id:
-              typeof crypto !== "undefined" && "randomUUID" in crypto
-                ? crypto.randomUUID()
-                : String(Date.now()),
-            src: histSrc,
-            tgt: target,
-            sourceText: value.slice(0, 500),
-            translatedText: res.text.slice(0, 500),
-            time: Date.now(),
-            fav: false,
-            engine: res.engine,
-          };
-          const next = [item, ...prev].slice(0, 100);
-          saveHistory(next);
-          return next;
-        });
+        addToHistory(value, res.text, histSrc, target, res.engine);
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
         if (e instanceof ProviderError) {
@@ -294,6 +728,7 @@ export default function Translator({
       setOutput("");
       setAlternatives([]);
       setDetected("");
+      setDict(undefined);
       return;
     }
     const tm = setTimeout(() => {
@@ -323,6 +758,9 @@ export default function Translator({
       setInput(output);
       setOutput("");
       setAlternatives([]);
+      setDict(undefined);
+      setCmpRuns({});
+      setCmpOpen(false);
     }
   };
 
@@ -446,6 +884,118 @@ export default function Translator({
     setEmail(v);
     store.set("salam-tr-email", v);
     notify(v ? t("n_email_saved") : t("n_email_removed"), "success");
+  };
+
+  /* ---------- دیکشنری: ترجمهٔ تنبل‌وار مثال‌ها هنگام باز شدن کارت ---------- */
+  const toggleDict = () => {
+    setDictOpen((open) => {
+      if (!open && dict && dict.examples.length > 0 && Object.keys(dictExTr).length === 0) {
+        const srcCode =
+          detected && isKnownLang(detected)
+            ? detected
+            : src === "auto"
+              ? detectLang(dict.word)
+              : src;
+        dict.examples.forEach((ex, i) => {
+          void translateText(ex, srcCode, tgt, { engine: "google" })
+            .then((r) => setDictExTr((prev) => ({ ...prev, [i]: r.text })))
+            .catch(() => {
+              /* مثال بدون ترجمه می‌ماند */
+            });
+        });
+      }
+      return !open;
+    });
+  };
+
+  /* ---------- مقایسهٔ موتورها ---------- */
+  const runCompare = useCallback(async () => {
+    const value = input.trim();
+    if (!value || !output) return;
+    const sig = `${value}|${src}|${tgt}|${email}|${api.provider}|${activeModel(api)}|${hasActiveKey(api) ? 1 : 0}`;
+    if (sig === cmpKey) return;
+    setCmpKey(sig);
+    cmpAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    cmpAbortRef.current = ctrl;
+    const engines: EngineUsed[] = hasActiveKey(api)
+      ? ["google", "mymemory", "custom"]
+      : ["google", "mymemory"];
+    const initial: Partial<Record<EngineUsed, CmpRun>> = {};
+    engines.forEach((e) => (initial[e] = { status: "loading" }));
+    setCmpRuns(initial);
+    await Promise.all(
+      engines.map(async (eng) => {
+        const started = performance.now();
+        try {
+          const r = await translateText(value, src, tgt, {
+            engine: eng,
+            email: email || undefined,
+            api,
+            signal: ctrl.signal,
+          });
+          if (ctrl.signal.aborted) return;
+          if (r.engine !== eng) {
+            // موتور ثابت جواب نداده و زنجیرهٔ پشتیبان ترجمه کرده؛ نتیجه را به نام آن موتور نشان نمی‌دهیم
+            setCmpRuns((prev) => ({
+              ...prev,
+              [eng]: {
+                status: "error",
+                error:
+                  eng === "custom"
+                    ? t("n_fallback_custom", { provider: providerById(api.provider).name })
+                    : t("cmp_failed"),
+              },
+            }));
+            return;
+          }
+          setCmpRuns((prev) => ({
+            ...prev,
+            [eng]: { status: "done", text: r.text, ms: performance.now() - started },
+          }));
+        } catch (e) {
+          if ((e as Error).name === "AbortError" || ctrl.signal.aborted) return;
+          setCmpRuns((prev) => ({
+            ...prev,
+            [eng]: {
+              status: "error",
+              error:
+                e instanceof ProviderError
+                  ? providerErrorMessage(e, t, providerById(api.provider).name)
+                  : t("cmp_failed"),
+            },
+          }));
+        }
+      })
+    );
+  }, [input, output, src, tgt, email, api, cmpKey, t]);
+
+  const toggleCompare = () => {
+    if (!cmpOpen) void runCompare();
+    setCmpOpen((v) => !v);
+  };
+
+  /** انتخاب یکی از ترجمه‌های مقایسه به‌عنوان ترجمهٔ اصلی */
+  const pickCompared = (eng: EngineUsed, text: string) => {
+    setOutput(text);
+    setUsedEngine(eng);
+    setAlternatives([]);
+    const value = input.trim();
+    if (!value) return;
+    const histSrc =
+      detected && isKnownLang(detected) ? detected : src === "auto" ? "auto" : src;
+    addToHistory(value, text, histSrc, tgt, eng, true);
+    setStats(recordTranslation(value.length));
+  };
+
+  const speakCmp = (text: string) => {
+    if (cmpSpeaking === text) {
+      stopSpeak();
+      setCmpSpeaking(null);
+      return;
+    }
+    setCmpSpeaking(text);
+    speak(text, langByCode(tgt).speech, () => setCmpSpeaking(null));
   };
 
   const restore = (item: HistoryItem) => {
@@ -710,6 +1260,9 @@ export default function Translator({
                     setInput("");
                     setOutput("");
                     setAlternatives([]);
+                    setDict(undefined);
+                    setCmpRuns({});
+                    setCmpOpen(false);
                     inputRef.current?.focus();
                   }}
                   disabled={!input}
@@ -928,6 +1481,45 @@ export default function Translator({
           )}
         </AnimatePresence>
       </div>
+
+      {/* دیکشنری — فقط وقتی گوگل برای واژه‌ای کوتاه داده برگردانده باشد */}
+      {dict && output && (
+        <DictCard
+          dict={dict}
+          open={dictOpen}
+          onToggle={toggleDict}
+          exTr={dictExTr}
+          wordLang={
+            detected && isKnownLang(detected)
+              ? detected
+              : src === "auto"
+                ? detectLang(dict.word)
+                : src
+          }
+        />
+      )}
+
+      {/* مقایسهٔ موتورها — بعد از هر ترجمه، بسته؛ با ضربه باز می‌شود */}
+      {output && !loading && (
+        <CompareCard
+          open={cmpOpen}
+          onToggle={toggleCompare}
+          runs={cmpRuns}
+          usedEngine={usedEngine}
+          output={output}
+          hasKey={hasActiveKey(api)}
+          providerName={providerById(api.provider).name}
+          modelLabel={shortModel(activeModel(api))}
+          speakingText={cmpSpeaking}
+          onPick={pickCompared}
+          onCopy={(txt) => void copyText(txt)}
+          onSpeak={speakCmp}
+          onSetupKey={() => {
+            setEngine("custom");
+            setShowApi(true);
+          }}
+        />
+      )}
 
       {/* stats */}
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

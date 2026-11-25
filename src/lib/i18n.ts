@@ -71,6 +71,24 @@ export const dict = {
   stat_chars: { fa: "حروف ترجمه‌شده", en: "Characters translated" },
   stat_langs: { fa: "زبان پشتیبانی‌شده", en: "Supported languages" },
 
+  /* ---------- دیکشنری و مقایسهٔ موتورها ---------- */
+  dict_title: { fa: "دیکشنری", en: "Dictionary" },
+  dict_sub: { fa: "معنی‌های واژه، مثال و مترادف", en: "Meanings, examples and synonyms" },
+  dict_examples: { fa: "مثال‌ها", en: "Examples" },
+  dict_synonyms: { fa: "مترادف‌ها", en: "Synonyms" },
+  dict_most_common: { fa: "پرتکرارترین", en: "Most common" },
+  dict_common: { fa: "پرتکرار", en: "Common" },
+  cmp_title: { fa: "مقایسهٔ موتورها", en: "Compare engines" },
+  cmp_sub: { fa: "هر سه موتور هم‌زمان ترجمه می‌کنن؛ بهترین رو انتخاب کن", en: "All engines translate at once — pick the best" },
+  cmp_pick: { fa: "انتخاب این", en: "Use this" },
+  cmp_current: { fa: "در حال نمایش", en: "In use" },
+  cmp_failed: { fa: "خطا در ترجمه", en: "Translation failed" },
+  cmp_need_key: { fa: "کلید تنظیم نشده", en: "No key set" },
+  cmp_setup_key: { fa: "تنظیم کلید", en: "Set up key" },
+  cmp_ai: { fa: "هوش مصنوعی", en: "AI" },
+  cmp_with_key: { fa: "با کلید تو", en: "with your key" },
+  cmp_time: { fa: "{t} ثانیه", en: "{t} s" },
+
   /* ---------- کلید اختصاصی (مدل‌های هوش مصنوعی) ---------- */
   api_title: { fa: "کلید اختصاصی", en: "Your API key" },
   api_desc_off: { fa: "OpenAI، Gemini، Groq و…", en: "OpenAI, Gemini, Groq…" },

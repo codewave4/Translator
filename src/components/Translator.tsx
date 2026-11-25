@@ -47,6 +47,7 @@ import {
   detectLang,
   engineName,
   isKnownLang,
+  isWordLike,
   langByCode,
   loadHistory,
   loadStats,
@@ -393,7 +394,10 @@ function CompareCard({
                 const run = runs[eng];
                 const noKey = eng === "custom" && !hasKey;
                 const isCurrent =
-                  !noKey && eng === usedEngine && run?.status === "done" && run.text === output;
+                  !noKey &&
+                  eng === usedEngine &&
+                  run?.status === "done" &&
+                  run.text?.trim() === output.trim();
                 return (
                   <div
                     key={eng}
@@ -694,6 +698,21 @@ export default function Translator({
         setCmpRuns({});
         setCmpKey("");
         setCmpOpen(false);
+        // دادهٔ دیکشنری فقط از گوگل می‌آید؛ اگر موتور اصلی گوگل نبود و ورودی واژه‌ای کوتاه
+        // است، دیکشنری جداگانه و بی‌صدا از گوگل گرفته می‌شود تا کارت همیشه بیاید
+        if (!res.dict && res.engine !== "google" && isWordLike(value)) {
+          void translateText(value, source, target, {
+            engine: "google",
+            email: email || undefined,
+            signal: ctrl.signal,
+          })
+            .then((g) => {
+              if (abortRef.current === ctrl && g.dict) setDict(g.dict);
+            })
+            .catch(() => {
+              /* دیکشنری قابلیت اضافه است؛ خطایش بی‌صدا رد می‌شود */
+            });
+        }
         if (source === "auto") setDetected(res.detected);
         setStats(recordTranslation(value.length));
 

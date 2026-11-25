@@ -88,6 +88,8 @@ export const dict = {
   cmp_ai: { fa: "هوش مصنوعی", en: "AI" },
   cmp_with_key: { fa: "با کلید تو", en: "with your key" },
   cmp_time: { fa: "{t} ثانیه", en: "{t} s" },
+  tone_title: { fa: "لحن ترجمه", en: "Translation tone" },
+  tone_via: { fa: "لحن {tone}", en: "{tone} tone" },
 
   /* ---------- کلید اختصاصی (مدل‌های هوش مصنوعی) ---------- */
   api_title: { fa: "کلید اختصاصی", en: "Your API key" },

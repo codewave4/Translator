@@ -20,6 +20,7 @@ import {
   MORE,
   MORE_PROVIDERS,
   ProviderError,
+  TONES,
   detectMoreProvider,
   fetchModels,
   providerById,
@@ -56,7 +57,7 @@ export function providerErrorMessage(
 }
 
 export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
-  const { t, n } = useI18n();
+  const { t, n, lang } = useI18n();
   const provider = providerById(settings.provider);
   const savedKey = (settings.keys[provider.id] ?? "").trim();
   const savedModel = settings.models[provider.id] ?? "";
@@ -87,6 +88,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     provider: provider.id,
     keys: { ...settings.keys, [provider.id]: key.trim() },
     models: settings.models,
+    tone: settings.tone,
   });
 
   /** دریافت مدل‌ها؛ در صورت شکست، لیست پیش‌فرض. مدل انتخاب‌شده را برمی‌گرداند */
@@ -144,9 +146,10 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
     setLive(null);
     setSelected(m);
     if (k) {
-      void loadModels({ provider: provider.id, keys: settings.keys, models: settings.models }, m).catch(
-        () => setVerified(false)
-      );
+      void loadModels(
+        { provider: provider.id, keys: settings.keys, models: settings.models, tone: settings.tone },
+        m
+      ).catch(() => setVerified(false));
     }
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -208,6 +211,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
           provider: hit.id,
           keys: { ...settings.keys, [hit.id]: keyDraft.trim() },
           models: settings.models,
+          tone: settings.tone,
         };
         if (hit.id !== provider.id) {
           notify(t("n_api_detected", { provider: hit.name }), "info");
@@ -244,6 +248,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
       provider: provider.id,
       keys: { ...settings.keys, [provider.id]: keyDraft.trim() },
       models: { ...settings.models, [provider.id]: model },
+      tone: settings.tone,
     });
     notify(t("n_api_saved", { provider: provider.name }), "success");
   };
@@ -668,6 +673,35 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
                       {t("api_ready", { provider: provider.name, model: shortModel(savedModel) })}
                     </span>
                   )}
+                </div>
+
+                {/* لحن ترجمهٔ هوش مصنوعی — بعد از انتخاب کلید و مدل */}
+                <div className="mt-5 border-t border-dashed border-pine-900/12 pt-4 dark:border-white/10">
+                  <div className="flex items-center gap-1.5 text-[13px] font-black text-ink/60 dark:text-white/60">
+                    <Sparkles className="h-4 w-4 text-gold-500" />
+                    {t("tone_title")}
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {TONES.map((tone) => {
+                      const activeTone = settings.tone === tone.id;
+                      return (
+                        <button
+                          key={tone.id}
+                          type="button"
+                          onClick={() => onChange({ ...settings, tone: tone.id })}
+                          aria-pressed={activeTone}
+                          className={cn(
+                            "rounded-full px-4 py-2 text-[13px] font-black transition active:scale-95",
+                            activeTone
+                              ? "bg-pine-950 text-gold-400 shadow-md dark:bg-gold-400 dark:text-pine-950"
+                              : "bg-white text-ink/55 ring-1 ring-pine-900/10 hover:text-pine-950 dark:bg-white/8 dark:text-white/55 dark:ring-white/10 dark:hover:text-white"
+                          )}
+                        >
+                          {tone.label[lang]}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </motion.div>

@@ -30,6 +30,7 @@ import HistoryPanel from "./HistoryPanel";
 import ApiKeyPanel, { providerErrorMessage } from "./ApiKeyPanel";
 import {
   ProviderError,
+  TONES,
   activeModel,
   hasActiveKey,
   loadApiSettings,
@@ -931,7 +932,7 @@ export default function Translator({
   const runCompare = useCallback(async () => {
     const value = input.trim();
     if (!value || !output) return;
-    const sig = `${value}|${src}|${tgt}|${email}|${api.provider}|${activeModel(api)}|${hasActiveKey(api) ? 1 : 0}`;
+    const sig = `${value}|${src}|${tgt}|${email}|${api.provider}|${activeModel(api)}|${api.tone}|${hasActiveKey(api) ? 1 : 0}`;
     if (sig === cmpKey) return;
     setCmpKey(sig);
     cmpAbortRef.current?.abort();
@@ -1306,6 +1307,9 @@ export default function Translator({
                     {t("via_engine", {
                       engine: engineName(usedEngine, lang, providerById(api.provider).name),
                     })}
+                    {usedEngine === "custom" &&
+                      api.tone !== "default" &&
+                      ` · ${t("tone_via", { tone: TONES.find((x) => x.id === api.tone)?.label[lang] ?? "" })}`}
                   </span>
                 )}
               </span>

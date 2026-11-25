@@ -202,6 +202,41 @@ export function detectMoreProvider(key: string): ProviderInfo | null {
   return MORE_PROVIDERS.find((p) => p.keyPattern?.test(k)) ?? null;
 }
 
+/* ---------------- لحن ترجمهٔ هوش مصنوعی ---------------- */
+
+export type ToneId = "default" | "formal" | "friendly" | "colloquial" | "literary";
+
+export const TONES: { id: ToneId; label: { fa: string; en: string }; prompt: string }[] = [
+  { id: "default", label: { fa: "پیش‌فرض", en: "Default" }, prompt: "" },
+  {
+    id: "formal",
+    label: { fa: "رسمی", en: "Formal" },
+    prompt:
+      "Use a formal, respectful tone suitable for official documents and business correspondence.",
+  },
+  {
+    id: "friendly",
+    label: { fa: "صمیمی", en: "Friendly" },
+    prompt: "Use a warm, friendly tone, as if writing to a good friend.",
+  },
+  {
+    id: "colloquial",
+    label: { fa: "محاوره‌ای", en: "Colloquial" },
+    prompt:
+      "Use a colloquial, everyday spoken tone — the way people actually talk, not formal written language.",
+  },
+  {
+    id: "literary",
+    label: { fa: "ادبی", en: "Literary" },
+    prompt: "Use an elegant, literary tone with refined and expressive wording.",
+  },
+];
+
+export const isToneId = (v: unknown): v is ToneId => TONES.some((x) => x.id === v);
+
+export const tonePrompt = (id: ToneId): string =>
+  TONES.find((x) => x.id === id)?.prompt ?? "";
+
 /* ---------------- ذخیره‌سازی تنظیمات ---------------- */
 
 export interface ApiSettings {
@@ -209,6 +244,8 @@ export interface ApiSettings {
   /** کلید هر سرویس جداگانه ذخیره می‌شود تا با تعویض سرویس از بین نرود */
   keys: Partial<Record<ProviderId, string>>;
   models: Partial<Record<ProviderId, string>>;
+  /** لحن ترجمهٔ هوش مصنوعی (فقط روی پرامپت مدل اثر می‌گذارد) */
+  tone: ToneId;
 }
 
 const KEY = "salam-tr-api-v1";
@@ -221,12 +258,13 @@ export function loadApiSettings(): ApiSettings {
         provider: isProviderId(v.provider) ? v.provider : "gemini",
         keys: v.keys && typeof v.keys === "object" ? v.keys : {},
         models: v.models && typeof v.models === "object" ? v.models : {},
+        tone: isToneId(v.tone) ? v.tone : "default",
       };
     }
   } catch {
     /* noop */
   }
-  return { provider: "gemini", keys: {}, models: {} };
+  return { provider: "gemini", keys: {}, models: {}, tone: "default" };
 }
 
 export function saveApiSettings(s: ApiSettings) {
@@ -279,9 +317,9 @@ const LANG_NAMES: Record<string, string> = {
 
 const langName = (code: string) => LANG_NAMES[code] ?? code;
 
-function buildPrompt(src: string, tgt: string): string {
+function buildPrompt(src: string, tgt: string, tone: ToneId = "default"): string {
   const from = src === "auto" ? "the source language (detect it automatically)" : langName(src);
-  return [
+  const lines = [
     `You are a professional translator. Translate the user's text from ${from} into ${langName(tgt)}.`,
     "Rules:",
     "- Output ONLY the translation. No explanations, no notes, no quotation marks, no preamble.",
@@ -289,7 +327,10 @@ function buildPrompt(src: string, tgt: string): string {
     "- Keep names, numbers, URLs and code unchanged.",
     "- Make the translation natural and fluent, as a native speaker would write it.",
     "- If the text is already in the target language, return it unchanged.",
-  ].join("\n");
+  ];
+  const tp = tonePrompt(tone);
+  if (tp) lines.push(`- Tone requirement (overrides the source tone): ${tp}`);
+  return lines.join("\n");
 }
 
 /** پاک‌سازی خروجی مدل: حذف گیومه‌ها، برچسب‌ها و بلوک‌های تفکر */
@@ -415,7 +456,7 @@ export async function providerTranslate(
   const key = activeKey(settings);
   const model = activeModel(settings);
   if (!key) throw new ProviderError("unauthorized");
-  const system = buildPrompt(src, tgt);
+  const system = buildPrompt(src, tgt, settings.tone);
   const raw =
     p.id === "gemini"
       ? await gemini(key, model, system, text, signal)

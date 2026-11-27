@@ -289,7 +289,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
   const recommended = useMemo(() => recommendedModel(provider.id, models.map((m) => m.id)), [models, provider.id]);
 
   const input =
-    "w-full rounded-xl border-2 border-pine-900/10 bg-cream px-4 py-2.5 text-sm font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60";
+    "w-full rounded-xl border-2 border-pine-900/10 bg-cream px-4 py-2.5 text-base font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60";
 
   return (
     <motion.div
@@ -476,7 +476,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
                     onClick={() => setShow((v) => !v)}
                     title={show ? t("api_hide") : t("api_show")}
                     aria-label={show ? t("api_hide") : t("api_show")}
-                    className="absolute end-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-ink/45 transition hover:bg-pine-950/5 hover:text-pine-950 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
+                    className="absolute end-2 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-ink/45 transition hover:bg-pine-950/5 hover:text-pine-950 dark:text-white/45 dark:hover:bg-white/10 dark:hover:text-white"
                   >
                     {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -554,7 +554,7 @@ export default function ApiKeyPanel({ settings, onChange, notify }: Props) {
                             placeholder={t("api_models_search")}
                             dir="ltr"
                             spellCheck={false}
-                            className={cn(input, "ps-9 text-left font-mono text-[13px]")}
+                            className={cn(input, "ps-9 text-left font-mono")}
                           />
                         </div>
                         {isOpenRouter && hasFree && (

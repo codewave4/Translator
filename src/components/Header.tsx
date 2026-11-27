@@ -85,7 +85,7 @@ export default function Header({ theme, onToggleTheme, tab, onTab }: Props) {
             onClick={toggle}
             title={t("lang_switch")}
             aria-label={t("lang_switch")}
-            className="flex h-10 items-center gap-1.5 rounded-xl bg-gold-400 px-3 text-[13px] font-black text-pine-950 shadow-md transition hover:-translate-y-0.5 hover:bg-gold-500 dark:bg-gold-400 dark:hover:bg-gold-500"
+            className="flex h-11 items-center gap-1.5 rounded-xl bg-gold-400 px-3 text-[13px] font-black text-pine-950 shadow-md transition hover:-translate-y-0.5 hover:bg-gold-500 dark:bg-gold-400 dark:hover:bg-gold-500"
           >
             <Globe className="h-4 w-4" />
             {t("lang_switch_label")}
@@ -95,7 +95,7 @@ export default function Header({ theme, onToggleTheme, tab, onTab }: Props) {
             onClick={onToggleTheme}
             aria-label={theme === "dark" ? t("theme_light") : t("theme_dark")}
             title={theme === "dark" ? t("theme_light") : t("theme_dark")}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-pine-950/6 text-pine-950 ring-1 ring-pine-900/10 transition hover:bg-pine-950/10 dark:bg-white/8 dark:text-gold-400 dark:ring-white/10 dark:hover:bg-white/15"
+            className="grid h-11 w-11 place-items-center rounded-xl bg-pine-950/6 text-pine-950 ring-1 ring-pine-900/10 transition hover:bg-pine-950/10 dark:bg-white/8 dark:text-gold-400 dark:ring-white/10 dark:hover:bg-white/15"
           >
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>

@@ -9,9 +9,11 @@ interface Props {
   value: string;
   onChange: (code: string) => void;
   allowAuto?: boolean;
+  /** سمت باز شدن منو؛ برای انتخاب دوم (مقصد) «end» تا در گوشی باریک از صفحه بیرون نزند */
+  align?: "start" | "end";
 }
 
-export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
+export default function LanguageSelect({ value, onChange, allowAuto, align = "start" }: Props) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -50,7 +52,7 @@ export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-2.5 text-sm font-black transition sm:px-4 sm:py-3",
+          "flex w-full items-center justify-between gap-2 rounded-2xl px-3 py-3 text-sm font-black transition sm:px-4 sm:py-3",
           open
             ? "bg-pine-950 text-white shadow-lg dark:bg-gold-400 dark:text-pine-950"
             : "bg-cream text-pine-950 hover:bg-sand dark:bg-white/8 dark:text-white dark:hover:bg-white/12"
@@ -88,7 +90,7 @@ export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18 }}
-            className="absolute start-0 top-full z-30 mt-2 w-64 max-w-[80vw] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-pine-900/10 dark:bg-pine-900 dark:ring-white/15"
+            className={cn("absolute top-full z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-pine-900/10 dark:bg-pine-900 dark:ring-white/15", align === "end" ? "end-0" : "start-0")}
           >
             <div className="border-b border-pine-900/8 p-2 dark:border-white/10">
               <div className="flex items-center gap-2 rounded-xl bg-cream px-3 py-2 dark:bg-white/8">
@@ -98,7 +100,7 @@ export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder={t("search_lang")}
-                  className="w-full bg-transparent text-sm font-medium text-ink outline-none placeholder:text-ink/35 dark:text-white dark:placeholder:text-white/35"
+                  className="w-full bg-transparent text-base font-medium text-ink outline-none placeholder:text-ink/35 dark:text-white dark:placeholder:text-white/35"
                 />
               </div>
             </div>
@@ -108,7 +110,7 @@ export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
                   type="button"
                   onClick={() => pick("auto")}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-black transition",
+                    "flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-black transition",
                     value === "auto"
                       ? "bg-clay-500/10 text-clay-600 dark:text-clay-400"
                       : "text-ink hover:bg-cream dark:text-white dark:hover:bg-white/8"
@@ -127,7 +129,7 @@ export default function LanguageSelect({ value, onChange, allowAuto }: Props) {
                   key={l.code}
                   onClick={() => pick(l.code)}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm transition",
+                    "flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm transition",
                     value === l.code
                       ? "bg-pine-950 font-black text-white dark:bg-gold-400 dark:text-pine-950"
                       : "font-medium text-ink hover:bg-cream dark:text-white dark:hover:bg-white/8"

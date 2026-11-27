@@ -640,7 +640,7 @@ const SKEY = "salam-tr-stats-v1";
 export function loadHistory(): HistoryItem[] {
   try {
     const v = JSON.parse(localStorage.getItem(HKEY) ?? "[]");
-    return Array.isArray(v) ? v : [];
+    return Array.isArray(v) ? v.slice(0, 20) : [];
   } catch {
     return [];
   }
@@ -648,7 +648,7 @@ export function loadHistory(): HistoryItem[] {
 
 export function saveHistory(items: HistoryItem[]) {
   try {
-    localStorage.setItem(HKEY, JSON.stringify(items.slice(0, 100)));
+    localStorage.setItem(HKEY, JSON.stringify(items.slice(0, 20)));
   } catch {
     /* noop */
   }

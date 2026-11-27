@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, History, RotateCcw, Star, Trash2 } from "lucide-react";
+import { ArrowRight, ChevronDown, History, RotateCcw, Star, Trash2 } from "lucide-react";
 import { timeAgo, type HistoryItem, type Notify } from "../lib/translator";
 import { useI18n } from "../lib/i18n";
 import { cn } from "../utils/cn";
@@ -25,6 +25,18 @@ export default function HistoryPanel({
   const { t, n, ln, lang } = useI18n();
   const [tab, setTab] = useState<"all" | "fav">("all");
   const [armClear, setArmClear] = useState(false);
+  /** تاریخچه پیش‌فرض بسته است؛ با کلیک روی سربرگ باز/بسته می‌شود */
+  const [open, setOpen] = useState(false);
+
+  // لینک «تاریخچه» در هدر (#history) هم بخش را باز کند
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash === "#history") setOpen(true);
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
 
   useEffect(() => {
     if (!armClear) return;
@@ -38,7 +50,13 @@ export default function HistoryPanel({
   return (
     <section id="history" className="scroll-mt-24 pt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2.5 text-xl font-black text-pine-950 dark:text-white">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="history-body"
+          className="flex items-center gap-2.5 text-xl font-black text-pine-950 dark:text-white"
+        >
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-pine-950 text-gold-400 dark:bg-gold-400 dark:text-pine-950">
             <History className="h-5 w-5" />
           </span>
@@ -46,7 +64,13 @@ export default function HistoryPanel({
           <span className="rounded-full bg-pine-950/6 px-3 py-1 text-xs font-black text-ink/55 dark:bg-white/10 dark:text-white/60">
             {n(items.length)}
           </span>
-        </h2>
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 shrink-0 text-ink/40 transition-transform duration-300 dark:text-white/40",
+              open && "rotate-180"
+            )}
+          />
+        </button>
         {items.length > 0 && (
           <button
             onClick={() => {
@@ -71,6 +95,17 @@ export default function HistoryPanel({
         )}
       </div>
 
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id="history-body"
+            key="history-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
       <div className="mt-4 flex gap-2">
         {(
           [
@@ -179,6 +214,9 @@ export default function HistoryPanel({
           </AnimatePresence>
         </div>
       )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

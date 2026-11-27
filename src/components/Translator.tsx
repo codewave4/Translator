@@ -633,7 +633,7 @@ export default function Translator({
         fav: sameTop && replaceTop ? prev[0].fav : false,
         engine: eng,
       };
-      const next = [item, ...(sameTop && replaceTop ? prev.slice(1) : prev)].slice(0, 100);
+      const next = [item, ...(sameTop && replaceTop ? prev.slice(1) : prev)].slice(0, 20);
       saveHistory(next);
       return next;
     });

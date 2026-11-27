@@ -186,7 +186,7 @@ export default function App() {
         <Footer />
 
         {/* toasts */}
-        <div className="pointer-events-none fixed bottom-6 right-1/2 z-[80] flex w-full max-w-sm translate-x-1/2 flex-col items-center gap-2 px-4">
+        <div aria-live="polite" role="status" className="pointer-events-none fixed bottom-6 right-1/2 z-[80] flex w-full max-w-sm translate-x-1/2 flex-col items-center gap-2 px-4">
           <AnimatePresence>
             {toasts.map((tst) => {
               const s = toastStyle[tst.type];

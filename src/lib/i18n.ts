@@ -55,6 +55,7 @@ export const dict = {
   via_engine: { fa: "با {engine}", en: "via {engine}" },
   btn_speak_tgt: { fa: "خواندن ترجمه", en: "Read translation aloud" },
   btn_copy_tr: { fa: "کپی ترجمه", en: "Copy translation" },
+  out_size: { fa: "اندازه متن ترجمه", en: "Translation text size" },
   output_placeholder: { fa: "ترجمه اینجا نمایش داده می‌شود...", en: "Translation will appear here..." },
   long_progress: { fa: "متن طولانی است؛ در حال ترجمه بخش {done} از {total}...", en: "Long text — translating part {done} of {total}..." },
   alternatives_title: { fa: "ترجمه‌های جایگزین (برای کپی بزن روشون):", en: "Alternative translations (tap to copy):" },

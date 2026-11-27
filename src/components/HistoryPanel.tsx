@@ -188,7 +188,7 @@ export default function HistoryPanel({
                       title={h.fav ? t("fav_remove") : t("fav_add")}
                       aria-label={t("favorite")}
                       className={cn(
-                        "grid h-9 w-9 place-items-center rounded-xl transition active:scale-90",
+                        "grid h-11 w-11 place-items-center rounded-xl transition active:scale-90",
                         h.fav
                           ? "bg-gold-400/20 text-gold-500"
                           : "text-ink/35 hover:bg-gold-400/15 hover:text-gold-500 dark:text-white/35"
@@ -203,7 +203,7 @@ export default function HistoryPanel({
                       }}
                       title={t("delete")}
                       aria-label={t("delete")}
-                      className="grid h-9 w-9 place-items-center rounded-xl text-ink/35 transition hover:bg-red-500/10 hover:text-red-500 active:scale-90 dark:text-white/35"
+                      className="grid h-11 w-11 place-items-center rounded-xl text-ink/35 transition hover:bg-red-500/10 hover:text-red-500 active:scale-90 dark:text-white/35"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

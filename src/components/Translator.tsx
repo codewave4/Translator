@@ -171,7 +171,7 @@ function DictCard({
           <span className="block text-[15px] font-black text-pine-950 dark:text-white">
             {t("dict_title")}
           </span>
-          <span className="block truncate text-xs font-medium text-ink/45 dark:text-white/45">
+          <span className="block truncate text-xs font-medium text-ink/60 dark:text-white/60">
             {t("dict_sub")}
           </span>
         </span>
@@ -202,7 +202,7 @@ function DictCard({
                   onClick={playWord}
                   title={t("btn_speak_src")}
                   aria-label={t("btn_speak_src")}
-                  className="grid h-9 w-9 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15"
+                  className="grid h-11 w-11 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15"
                 >
                   {speakingWord ? (
                     <VolumeX className="h-4 w-4 text-clay-500" />
@@ -230,7 +230,7 @@ function DictCard({
                             {s.reverse.length > 0 && (
                               <span
                                 dir="ltr"
-                                className="ms-2 inline-block text-[13px] font-medium text-ink/40 dark:text-white/40"
+                                className="ms-2 inline-block text-[13px] font-medium text-ink/60 dark:text-white/60"
                               >
                                 {s.reverse.slice(0, 4).join(", ")}
                               </span>
@@ -354,7 +354,7 @@ function CompareCard({
     return ENGINES.find((e) => e.id === eng)?.desc[lang] ?? "";
   };
   const smallBtn =
-    "grid h-9 w-9 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15";
+    "grid h-11 w-11 place-items-center rounded-xl bg-pine-950/5 text-pine-800 transition hover:bg-pine-950/10 active:scale-95 dark:bg-white/8 dark:text-white dark:hover:bg-white/15";
   return (
     <div className="mt-4 overflow-hidden rounded-[1.75rem] bg-white shadow-sm ring-1 ring-pine-900/10 dark:bg-white/[0.04] dark:ring-white/10">
       <button
@@ -370,7 +370,7 @@ function CompareCard({
           <span className="block text-[15px] font-black text-pine-950 dark:text-white">
             {t("cmp_title")}
           </span>
-          <span className="block truncate text-xs font-medium text-ink/45 dark:text-white/45">
+          <span className="block truncate text-xs font-medium text-ink/60 dark:text-white/60">
             {t("cmp_sub")}
           </span>
         </span>
@@ -419,7 +419,7 @@ function CompareCard({
                         <span className="block truncate text-[14px] font-black text-pine-950 dark:text-white">
                           {nameOf(eng)}
                         </span>
-                        <span className="block truncate text-[11px] font-medium text-ink/45 dark:text-white/45" dir="auto">
+                        <span className="block truncate text-[11px] font-medium text-ink/60 dark:text-white/60" dir="auto">
                           {subOf(eng)}
                         </span>
                       </span>
@@ -546,6 +546,11 @@ export default function Translator({
   const [showEmail, setShowEmail] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
   const [stats, setStats] = useState<Stats>(loadStats);
+  /** اندازه متن ترجمه (۱۵/۱۷/۱۹) — در مرورگر ذخیره می‌شود */
+  const [outSize, setOutSize] = useState(() => {
+    const v = Number(store.get("salam-tr-outsize", "17"));
+    return [15, 17, 19].includes(v) ? v : 17;
+  });
   const [speaking, setSpeaking] = useState<"src" | "tgt" | null>(null);
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -568,6 +573,7 @@ export default function Translator({
   useEffect(() => store.set("salam-tr-tgt", tgt), [tgt]);
   useEffect(() => store.set("salam-tr-auto", auto ? "1" : "0"), [auto]);
   useEffect(() => store.set("salam-tr-engine", engine), [engine]);
+  useEffect(() => store.set("salam-tr-outsize", String(outSize)), [outSize]);
   useEffect(() => saveApiSettings(api), [api]);
   // با انتخاب «کلید اختصاصی» بدون کلید ذخیره‌شده، پنل خودکار باز شود
   useEffect(() => {
@@ -1061,7 +1067,7 @@ export default function Translator({
   ];
 
   const iconBtn =
-    "grid h-10 w-10 place-items-center rounded-xl transition active:scale-95 disabled:opacity-40";
+    "grid h-11 w-11 place-items-center rounded-xl transition active:scale-95 disabled:opacity-40";
 
   return (
     <section id="translator" className="mx-auto max-w-6xl scroll-mt-24 px-4 pt-8 sm:px-6">
@@ -1096,7 +1102,7 @@ export default function Translator({
           >
             <ArrowRightLeft className="h-5 w-5" />
           </motion.button>
-          <LanguageSelect value={tgt} onChange={setTgt} />
+          <LanguageSelect value={tgt} onChange={setTgt} align="end" />
         </div>
 
         {/* engine selector */}
@@ -1192,7 +1198,7 @@ export default function Translator({
           {/* source */}
           <div className="flex flex-col border-b border-pine-900/8 p-4 sm:p-5 lg:border-b-0 dark:border-white/10">
             <div className="flex min-h-8 items-center justify-between gap-2">
-              <span className="text-[13px] font-black text-ink/45 dark:text-white/45">
+              <span className="text-[13px] font-black text-ink/60 dark:text-white/60">
                 {t("source_label")}
               </span>
               <AnimatePresence>
@@ -1231,7 +1237,7 @@ export default function Translator({
                     ? "text-red-500"
                     : input.length > 4500
                       ? "text-amber-500"
-                      : "text-ink/40 dark:text-white/40"
+                      : "text-ink/60 dark:text-white/60"
                 )}
               >
                 {t("counter", {
@@ -1299,7 +1305,7 @@ export default function Translator({
           {/* target */}
           <div className="flex flex-col border-pine-900/8 p-4 sm:p-5 lg:border-s dark:border-white/10">
             <div className="flex min-h-8 items-center justify-between gap-2">
-              <span className="flex min-w-0 items-center gap-2 text-[13px] font-black text-ink/45 dark:text-white/45">
+              <span className="flex min-w-0 items-center gap-2 text-[13px] font-black text-ink/60 dark:text-white/60">
                 <span className="truncate">{t("target_label", { lang: ln(tgt) })}</span>
                 {usedEngine && output && !loading && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-black text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
@@ -1315,11 +1321,22 @@ export default function Translator({
               </span>
               <div className="flex items-center gap-1.5">
                 <button
+                  type="button"
+                  onClick={() => setOutSize((v) => (v >= 19 ? 15 : v + 2))}
+                  title={t("out_size")}
+                  aria-label={t("out_size")}
+                  className={cn(iconBtn, "h-11 w-11 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
+                >
+                  <span className="font-black" style={{ fontSize: outSize }}>
+                    A
+                  </span>
+                </button>
+                <button
                   onClick={() => void exportPdf()}
                   disabled={!output.trim() || pdfBusy}
                   title={t("btn_pdf")}
                   aria-label={t("btn_pdf")}
-                  className={cn(iconBtn, "h-9 w-9 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
+                  className={cn(iconBtn, "h-11 w-11 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
                 >
                   {pdfBusy ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1332,7 +1349,7 @@ export default function Translator({
                   disabled={!output.trim()}
                   title={t("btn_speak_tgt")}
                   aria-label={t("btn_speak_tgt")}
-                  className={cn(iconBtn, "h-9 w-9 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
+                  className={cn(iconBtn, "h-11 w-11 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
                 >
                   {speaking === "tgt" ? (
                     <VolumeX className="h-4 w-4 text-clay-500" />
@@ -1345,7 +1362,7 @@ export default function Translator({
                   disabled={!output.trim()}
                   title={t("btn_copy_tr")}
                   aria-label={t("btn_copy_tr")}
-                  className={cn(iconBtn, "h-9 w-9 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
+                  className={cn(iconBtn, "h-11 w-11 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
                 >
                   {copied ? (
                     <Check className="h-4 w-4 text-emerald-500" />
@@ -1356,7 +1373,7 @@ export default function Translator({
               </div>
             </div>
 
-            <div dir="auto" className="mt-2 min-h-[170px] flex-1 py-1 text-[17px] leading-9 font-medium">
+            <div dir="auto" className="mt-2 min-h-[170px] flex-1 py-1 leading-9 font-medium" style={{ fontSize: outSize }}>
               {loading && !output ? (
                 <div className="space-y-3 pt-2">
                   <div className="skeleton h-4 w-11/12 rounded-lg bg-pine-950/8 dark:bg-white/8" />
@@ -1380,7 +1397,7 @@ export default function Translator({
                     style={{ width: `${(progress.done / progress.total) * 100}%` }}
                   />
                 </div>
-                <p className="mt-1.5 text-xs font-bold text-ink/45 dark:text-white/45">
+                <p className="mt-1.5 text-xs font-bold text-ink/60 dark:text-white/60">
                   {t("long_progress", { done: n(progress.done), total: n(progress.total) })}
                 </p>
               </div>
@@ -1395,7 +1412,7 @@ export default function Translator({
                   className="overflow-hidden"
                 >
                   <div className="mt-3 rounded-2xl bg-cream p-3 dark:bg-white/5">
-                    <p className="px-1 text-xs font-black text-ink/45 dark:text-white/45">
+                    <p className="px-1 text-xs font-black text-ink/60 dark:text-white/60">
                       {t("alternatives_title")}
                     </p>
                     <div className="mt-2 space-y-1.5">
@@ -1490,7 +1507,7 @@ export default function Translator({
                     onKeyDown={(e) => e.key === "Enter" && saveEmail()}
                     placeholder="you@email.com"
                     dir="ltr"
-                    className="w-full rounded-xl border-2 border-pine-900/10 bg-cream px-4 py-2.5 text-left text-sm font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 sm:w-56 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60"
+                    className="w-full rounded-xl border-2 border-pine-900/10 bg-cream px-4 py-2.5 text-left text-base font-medium text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 sm:w-56 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60"
                   />
                   <button
                     onClick={saveEmail}
@@ -1558,7 +1575,7 @@ export default function Translator({
               <span className="block truncate text-xl font-black text-pine-950 dark:text-white">
                 {s.value}
               </span>
-              <span className="block text-xs font-bold text-ink/45 dark:text-white/45">
+              <span className="block text-xs font-bold text-ink/60 dark:text-white/60">
                 {s.label}
               </span>
             </span>

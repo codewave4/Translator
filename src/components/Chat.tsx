@@ -400,7 +400,7 @@ export default function Chat({ notify, onSetupKey }: Props) {
                   rows={1}
                   dir="auto"
                   placeholder={t("chat_placeholder")}
-                  className="max-h-40 min-h-[48px] w-full flex-1 resize-none rounded-2xl border-2 border-pine-900/10 bg-cream px-4 py-3 text-[15px] leading-6 text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60"
+                  className="max-h-40 min-h-[48px] w-full flex-1 resize-none rounded-2xl border-2 border-pine-900/10 bg-cream px-4 py-3 text-base leading-6 text-ink outline-none transition placeholder:text-ink/30 focus:border-pine-700 dark:border-white/10 dark:bg-white/8 dark:text-white dark:placeholder:text-white/30 dark:focus:border-gold-400/60"
                 />
                 {busy ? (
                   <button

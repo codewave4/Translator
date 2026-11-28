@@ -19,6 +19,7 @@ import {
   Mic,
   Scale,
   Settings2,
+  Share2,
   Sparkles,
   Type,
   Volume2,
@@ -865,6 +866,19 @@ export default function Translator({
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const shareText = async (text: string) => {
+    if (!text.trim()) return;
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch {
+        return; // لغو توسط کاربر
+      }
+    }
+    await copyText(text); // مرورگر اشتراک ندارد: کپی + توست
+  };
+
   const paste = async () => {
     try {
       const txt = await navigator.clipboard.readText();
@@ -1369,6 +1383,15 @@ export default function Translator({
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}
+                </button>
+                <button
+                  onClick={() => void shareText(output)}
+                  disabled={!output.trim()}
+                  title={t("btn_share")}
+                  aria-label={t("btn_share")}
+                  className={cn(iconBtn, "h-11 w-11 bg-pine-950/5 text-pine-800 hover:bg-pine-950/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/15")}
+                >
+                  <Share2 className="h-4 w-4" />
                 </button>
               </div>
             </div>

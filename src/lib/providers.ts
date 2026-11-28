@@ -347,12 +347,19 @@ function clean(out: string): string {
 /* ---------------- فراخوانی سرویس‌ها ---------------- */
 
 async function doFetch(url: string, init: RequestInit, signal?: AbortSignal): Promise<Response> {
-  try {
-    return await fetch(url, { ...init, signal });
-  } catch (e) {
-    if (isAbort(e)) throw e;
-    throw new ProviderError("network");
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const t = AbortSignal.timeout(30000);
+      const s = signal ? AbortSignal.any([signal, t]) : t;
+      return await fetch(url, { ...init, signal: s });
+    } catch (e) {
+      if (isAbort(e)) throw e;
+      lastErr = e;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 800));
+    }
   }
+  throw lastErr instanceof ProviderError ? lastErr : new ProviderError("network");
 }
 
 async function readError(res: Response): Promise<string> {

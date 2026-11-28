@@ -261,6 +261,31 @@ export class TranslateError extends Error {
 
 const isAbort = (e: unknown) => (e as Error)?.name === "AbortError";
 
+/* تایم‌اوت هر تلاش شبکه + یک بار تلاش مجدد (اینترنت ضعیف)؛
+   لغو توسط کاربر (AbortError) تلاش مجدد نمی‌شود و پاسخ‌های قدیمی
+   با AbortController در doTranslate نادیده گرفته می‌شوند */
+const FETCH_TIMEOUT_MS = 12000;
+const RETRY_DELAY_MS = 800;
+
+function timeoutSignal(signal?: AbortSignal): AbortSignal {
+  const t = AbortSignal.timeout(FETCH_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, t]) : t;
+}
+
+async function fetchWithRetry(url: string, signal?: AbortSignal): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fetch(url, { signal: timeoutSignal(signal) });
+    } catch (e) {
+      if (isAbort(e)) throw e;
+      lastErr = e;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+  throw lastErr;
+}
+
 function decodeHtml(s: string): string {
   const el = document.createElement("textarea");
   el.innerHTML = s;
@@ -383,7 +408,7 @@ function normalizeGoogleCode(code: string): string {
 async function googleFetch(url: string, signal?: AbortSignal): Promise<unknown> {
   let res: Response;
   try {
-    res = await fetch(url, { signal });
+    res = await fetchWithRetry(url, signal);
   } catch (e) {
     if (isAbort(e)) throw e;
     throw new TranslateError("network");
@@ -508,7 +533,7 @@ async function myMemoryChunk(
 
   let res: Response;
   try {
-    res = await fetch(url, { signal });
+    res = await fetchWithRetry(url, signal);
   } catch (e) {
     if (isAbort(e)) throw e;
     throw new TranslateError("network");

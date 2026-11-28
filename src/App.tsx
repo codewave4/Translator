@@ -120,7 +120,7 @@ export default function App() {
             <div className="absolute -top-32 right-1/4 h-72 w-72 rounded-full bg-clay-500/15 blur-[110px] dark:bg-clay-600/20" />
             <div className="absolute -top-20 left-1/4 h-72 w-72 rounded-full bg-gold-500/15 blur-[110px]" />
 
-            <div className="relative mx-auto max-w-6xl px-4 pb-2 pt-12 text-center sm:px-6 sm:pt-16">
+            <div className="relative mx-auto max-w-6xl px-4 pb-2 pt-6 text-center sm:px-6 sm:pt-16">
               <motion.div
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -135,7 +135,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.08 }}
-                className="mt-5 text-4xl font-black leading-[1.6] text-pine-950 sm:text-5xl sm:leading-[1.6] dark:text-white"
+                className="mt-3 text-3xl font-black leading-[1.5] text-pine-950 sm:mt-5 sm:text-5xl sm:leading-[1.6] dark:text-white"
               >
                 {t("hero_title_before")}
                 <span className="text-clay-500"> {t("hero_title_accent")} </span>
@@ -145,7 +145,7 @@ export default function App() {
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.16 }}
-                className="mx-auto mt-3 max-w-2xl text-[15px] leading-8 text-ink/60 sm:text-base dark:text-white/60"
+                className="mx-auto mt-3 hidden max-w-2xl text-[15px] leading-8 text-ink/60 sm:block sm:text-base dark:text-white/60"
               >
                 {t("hero_desc", { n: n(20) })}
               </motion.p>
@@ -153,18 +153,18 @@ export default function App() {
                 initial={{ opacity: 0, y: 22 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.24 }}
-                className="mt-6 flex flex-wrap items-center justify-center gap-2"
+                className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:mt-6"
               >
                 <a
                   href="#translator"
-                  className="rounded-2xl bg-pine-950 px-6 py-3 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-clay-600 dark:bg-gold-400 dark:text-pine-950 dark:hover:bg-gold-500"
+                  className="rounded-2xl bg-pine-950 px-5 py-2.5 text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-clay-600 sm:px-6 sm:py-3 dark:bg-gold-400 dark:text-pine-950 dark:hover:bg-gold-500"
                 >
                   {t("hero_cta_start")}
                 </a>
                 <button
                   type="button"
                   onClick={() => setTab("chat")}
-                  className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-pine-950 shadow-md ring-1 ring-pine-900/10 transition hover:-translate-y-0.5 hover:ring-clay-500/40 dark:bg-white/8 dark:text-white dark:ring-white/15 dark:hover:bg-white/12"
+                  className="rounded-2xl bg-white px-5 py-2.5 text-sm font-black text-pine-950 shadow-md ring-1 ring-pine-900/10 transition hover:-translate-y-0.5 hover:ring-clay-500/40 sm:px-6 sm:py-3 dark:bg-white/8 dark:text-white dark:ring-white/15 dark:hover:bg-white/12"
                 >
                   {t("chat_title")}
                 </button>

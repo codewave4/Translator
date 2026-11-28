@@ -1322,7 +1322,7 @@ export default function Translator({
               <span className="flex min-w-0 items-center gap-2 text-[13px] font-black text-ink/60 dark:text-white/60">
                 <span className="truncate">{t("target_label", { lang: ln(tgt) })}</span>
                 {usedEngine && output && !loading && (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-black text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
+                  <span className="hidden shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-black text-emerald-600 ring-1 ring-emerald-500/20 xl:inline-flex dark:text-emerald-400">
                     <EngineIcon id={usedEngine} className="h-3 w-3" />
                     {t("via_engine", {
                       engine: engineName(usedEngine, lang, providerById(api.provider).name),
@@ -1411,6 +1411,20 @@ export default function Translator({
                 </p>
               )}
             </div>
+
+            {usedEngine && output && !loading && (
+              <div className="mt-1 flex xl:hidden">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-black text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400">
+                  <EngineIcon id={usedEngine} className="h-3 w-3" />
+                  {t("via_engine", {
+                    engine: engineName(usedEngine, lang, providerById(api.provider).name),
+                  })}
+                  {usedEngine === "custom" &&
+                    api.tone !== "default" &&
+                    ` · ${t("tone_via", { tone: TONES.find((x) => x.id === api.tone)?.label[lang] ?? "" })}`}
+                </span>
+              </div>
+            )}
 
             {loading && progress.total > 1 && (
               <div className="mt-3">

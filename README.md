@@ -2,7 +2,7 @@
 
   <p>
     <a href="https://codewave4.github.io/Translator/">
-      <img src="https://api.iconify.design/solar:translation-2-bold-duotone.svg?color=%23e4572e" width="96" height="96" alt="Translator Logo" />
+      <img src="logo.png" width="128" height="128" alt="Translator Logo" />
     </a>
   </p>
 

@@ -45,6 +45,12 @@ export const LANGUAGES: Lang[] = [
   { code: "ms", fa: "مالایی", en: "Malay", native: "Melayu", speech: "ms-MY" },
   { code: "th", fa: "تایلندی", en: "Thai", native: "ไทย", speech: "th-TH" },
   { code: "vi", fa: "ویتنامی", en: "Vietnamese", native: "Tiếng Việt", speech: "vi-VN" },
+  { code: "ur", fa: "اردو", en: "Urdu", native: "اردو", speech: "ur-PK" },
+  { code: "ps", fa: "پشتو", en: "Pashto", native: "پښتو", speech: "ps-AF" },
+  { code: "ku", fa: "کردی", en: "Kurdish", native: "Kurdî", speech: "ku" },
+  { code: "az", fa: "آذربایجانی", en: "Azerbaijani", native: "Azərbaycanca", speech: "az-AZ" },
+  { code: "tg", fa: "تاجیکی", en: "Tajik", native: "Тоҷикӣ", speech: "tg-TJ" },
+  { code: "bn", fa: "بنگالی", en: "Bengali", native: "বাংলা", speech: "bn-BD" },
 ];
 
 export const isKnownLang = (code: string): boolean =>
@@ -106,20 +112,103 @@ export const engineName = (e: EngineUsed, lang: UiLangCode = "fa", providerName?
 
 /* ---------------- تشخیص زبان (بر اساس خط نوشتاری) ---------------- */
 
+/* فهرست واژه‌های پرتکرار برای تشخیص زبان‌های لاتین؛
+   واژه متمایز ۲ امتیاز، واژه معمولی ۱ امتیاز؛ حداقل ۲ امتیاز و بدون تساوی لازم است */
+const LATIN_STOPWORDS: Record<string, { common: string[]; distinctive: string[] }> = {
+  fr: {
+    common: ["le", "la", "les", "de", "des", "du", "et", "est", "je", "tu", "il", "nous", "vous", "ce", "dans", "que", "qui", "pas", "plus", "pour", "sur", "avec", "être", "avoir", "faire", "ne", "elle", "on", "au", "aux", "sont", "comme", "tout", "aussi", "bien", "aime", "amour", "temps", "vie", "monde", "jour", "nuit", "mal", "grand", "petit"],
+    distinctive: ["bonjour", "merci", "oui", "salut", "madame", "monsieur"],
+  },
+  de: {
+    common: ["der", "die", "das", "und", "ist", "ich", "du", "er", "sie", "wir", "nicht", "von", "zu", "den", "mit", "sich", "des", "auf", "für", "ein", "eine", "haben", "sein", "werden", "als", "auch", "noch", "nur", "schon", "liebe", "dich", "mich", "mein", "gut", "heute", "zeit", "geht", "alles", "jetzt", "hier", "viele", "leute", "tag", "nacht"],
+    distinctive: ["danke", "tschüss", "genau", "natürlich", "wirklich"],
+  },
+  es: {
+    common: ["el", "la", "los", "las", "de", "que", "y", "en", "un", "una", "es", "se", "su", "por", "con", "no", "para", "está", "son", "como", "muy", "pero", "sus", "al", "del", "qué", "hacer", "tengo", "te", "quiero", "mi", "amor", "hoy", "ayer", "mañana", "bueno", "mucho", "nada", "todo", "siempre", "nunca", "también", "cuando", "donde"],
+    distinctive: ["gracias", "hola", "buenos", "buenas", "adiós"],
+  },
+  it: {
+    common: ["il", "lo", "la", "gli", "che", "di", "e", "è", "non", "sono", "una", "per", "con", "questo", "anche", "come", "sei", "ho", "si", "mi", "ti", "ci", "più", "dopo", "prima", "amo", "amore", "oggi", "ieri", "domani", "bene", "male", "molto", "sempre", "mai", "tutto", "niente"],
+    distinctive: ["grazie", "ciao", "prego", "buongiorno"],
+  },
+  pt: {
+    common: ["o", "a", "os", "as", "de", "que", "e", "é", "um", "uma", "não", "para", "com", "por", "isso", "muito", "mais", "seu", "está", "são", "como", "quando", "onde", "eu", "te", "amo", "amor", "hoje", "ontem", "amanhã", "bem", "sempre", "nunca", "tudo", "nada"],
+    distinctive: ["obrigado", "obrigada", "olá"],
+  },
+  tr: {
+    common: ["ve", "bir", "bu", "da", "de", "ne", "çok", "için", "gibi", "ben", "sen", "biz", "onlar", "değil", "kadar", "sonra", "önce", "daha", "en", "hiç", "ya", "da", "seni", "seviyorum", "bugün", "yarın", "dün", "iyi", "kötü", "her", "zaman"],
+    distinctive: ["merhaba", "teşekkür", "evet", "hayır", "günaydın"],
+  },
+  nl: {
+    common: ["de", "het", "een", "ik", "te", "dat", "is", "in", "hij", "niet", "van", "op", "aan", "met", "als", "voor", "zijn", "dit", "deze", "maar", "ook", "nog", "al", "hou", "je", "jij", "jou", "goed", "vandaag", "morgen", "gisteren", "heel", "erg"],
+    distinctive: ["bedankt", "hallo", "alstublieft", "graag"],
+  },
+  sv: {
+    common: ["och", "det", "att", "jag", "är", "inte", "med", "för", "som", "på", "till", "av", "en", "ett", "har", "kan", "du", "var", "när", "hur", "älskar", "dig", "mig", "bra", "idag", "igår", "imorgon", "mycket", "alltid", "aldrig", "allt", "inget"],
+    distinctive: ["tack", "hej", "varsågod", "ursäkta"],
+  },
+  pl: {
+    common: ["i", "nie", "to", "się", "jest", "jak", "ale", "czy", "więc", "bardzo", "który", "przez", "bez", "mam", "jestem", "też", "już", "jeszcze", "tylko", "może", "kocham", "cię", "mnie", "dobrze", "dziś", "jutro", "wczoraj", "zawsze", "nigdy", "wszystko", "nic"],
+    distinctive: ["dziękuję", "cześć", "przepraszam", "dzień"],
+  },
+  vi: {
+    common: ["của", "và", "là", "không", "tôi", "bạn", "này", "đó", "trong", "có", "đã", "sẽ", "khi", "mà", "thì", "nên", "rất", "cảm", "ơn", "yêu"],
+    distinctive: ["không", "của", "xin", "chào"],
+  },
+  az: {
+    common: ["və", "bir", "çox", "deyil", "üçün", "kimi", "çünki", "salam", "yox", "var", "belə", "indi", "sonra", "əvvəl", "mən", "sən", "biz", "onlar"],
+    distinctive: ["və", "üçün", "deyil", "çox", "necəsən"],
+  },
+};
+
+/** تشخیص زبان لاتین با واژه‌های پرتکرار؛ در صورت تردید null تا به «en» برگردد */
+function detectLatinLang(words: string[]): string | null {
+  const set = new Set(words);
+  let best = "";
+  let bestScore = 0;
+  let tie = false;
+  for (const [code, { common, distinctive }] of Object.entries(LATIN_STOPWORDS)) {
+    let score = 0;
+    for (const w of distinctive) if (set.has(w)) score += 2;
+    for (const w of common) if (set.has(w)) score += 1;
+    if (score > bestScore) {
+      best = code;
+      bestScore = score;
+      tie = false;
+    } else if (score === bestScore && score > 0) {
+      tie = true;
+    }
+  }
+  if (bestScore < 2 || tie) return null;
+  return best;
+}
+
 export function detectLang(text: string): string {
   const t = text.trim();
   if (!t) return "en";
   if (/[\u3040-\u30FF\u31F0-\u31FF]/.test(t)) return "ja"; // kana
   if (/[\uAC00-\uD7AF]/.test(t)) return "ko"; // hangul
   if (/[\u4E00-\u9FFF]/.test(t)) return "zh"; // cjk
-  if (/[\u0400-\u04FF]/.test(t)) return "ru"; // cyrillic
+  if (/[\u0980-\u09FF]/.test(t)) return "bn"; // bengali
+  if (/[\u0400-\u04FF]/.test(t)) {
+    // تاجیکی (қ ғ ҳ ҷ ӣ ӯ) و اوکراینی (і ї є ґ) پیش از روسی عمومی
+    if (/[қғҳҷӣӯҚҒҲҶӢӮ]/.test(t)) return "tg";
+    if (/[іїєґІЇЄҐ]/.test(t)) return "uk";
+    return "ru"; // cyrillic
+  }
   if (/[\u0900-\u097F]/.test(t)) return "hi"; // devanagari
   if (/[\u0E00-\u0E7F]/.test(t)) return "th"; // thai
   if (/[\u0600-\u06FF]/.test(t)) {
+    // اردو (ٹ ڈ ڑ ں ھ ے)، پشتو (ځ څ ډ ړ ږ ښ ګ ڼ ې ۍ)، کردی سورانی (ێ ڕ ڵ ۇ ۆ)
+    if (/[ٹڈڑںھےۓ]/.test(t)) return "ur";
+    if (/[ځڅډړږښګڼېۍ]/.test(t)) return "ps";
+    if (/[ێڕڵۇۆ]/.test(t)) return "ku";
     // حروف مخصوص فارسی (گ چ پ ژ) + ی و ک فارسی + نیم‌فاصله
     return /[گچپژ\u06CC\u06A9\u200C]/.test(t) ? "fa" : "ar";
   }
-  return "en";
+  // لاتین: فرانسوی/آلمانی/اسپانیایی و… با واژه‌های پرتکرار، وگرنه انگلیسی
+  const latin = detectLatinLang(t.toLowerCase().match(/[\p{L}]+/gu) ?? []);
+  return latin ?? "en";
 }
 
 /* ---------------- تکه‌تکه کردن متن‌های طولانی ---------------- */

@@ -96,7 +96,6 @@ export default function LanguageSelect({ value, onChange, allowAuto, align = "st
               <div className="flex items-center gap-2 rounded-xl bg-cream px-3 py-2 dark:bg-white/8">
                 <Search className="h-4 w-4 shrink-0 text-ink/40 dark:text-white/40" />
                 <input
-                  autoFocus
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder={t("search_lang")}
